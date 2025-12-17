@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class PbxController extends Controller
 {
@@ -17,11 +18,30 @@ class PbxController extends Controller
      */
     public function validate(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'token' => ['required', 'uuid'],
         ]);
 
-        $token = $data['token'];
+        if ($validator->fails()) {
+            $token = (string) $request->input('token');
+
+            Log::info('PBX validate', [
+                'token' => $token,
+                'found' => false,
+                'minutes_left' => null,
+                'status' => null,
+                'reason' => 'invalid_token',
+                'errors' => $validator->errors()->all(),
+            ]);
+
+            return response()->json([
+                'valid' => false,
+                'token' => $token,
+                'reason' => 'invalid_token',
+            ], 200);
+        }
+
+        $token = $validator->validated()['token'];
         $card = CallCard::where('uuid', $token)->first();
 
         if (!$card) {
