@@ -39,11 +39,21 @@
             @endforeach
         </div>
 
+        <div class="flex justify-end mb-4">
+            <button type="button"
+                    id="backspaceBtn"
+                    class="px-4 py-2 rounded-full bg-slate-800 hover:bg-slate-700 transition text-sm"
+                    onclick="backspace()">
+                ⌫
+            </button>
+        </div>
+
         {{-- Controls --}}
         <div class="flex items-center justify-center gap-4">
             <button id="muteBtn"
                     type="button"
-                    class="w-10 h-10 rounded-full bg-slate-800 text-xs">
+                    class="w-16 h-10 rounded-full bg-slate-800 text-xs"
+                    onclick="toggleMute()">
                 Mute
             </button>
 
@@ -56,7 +66,8 @@
 
             <button id="speakerBtn"
                     type="button"
-                    class="w-10 h-10 rounded-full bg-slate-800 text-xs">
+                    class="w-24 h-10 rounded-full bg-slate-800 text-xs"
+                    onclick="toggleSpeaker()">
                 Spk
             </button>
         </div>
@@ -70,13 +81,30 @@
     let timerInterval = null;
     let elapsedSeconds = 0;
     let ringingTimeout = null;
+    const state = {
+        muted: false,
+        speaker: false,
+    };
+
+    function renderNumber() {
+        const input = document.getElementById('dialedNumber');
+        const display = document.getElementById('dialedNumberDisplay');
+        display.textContent = input.value;
+    }
 
     function appendDigit(digit) {
         if (inCall) return;
         const input  = document.getElementById('dialedNumber');
-        const display = document.getElementById('dialedNumberDisplay');
         input.value += digit;
-        display.textContent = input.value;
+        renderNumber();
+    }
+
+    function backspace() {
+        if (inCall) return;
+        const input = document.getElementById('dialedNumber');
+        if (!input.value) return;
+        input.value = input.value.slice(0, -1);
+        renderNumber();
     }
 
     function setKeypadDisabled(state) {
@@ -88,6 +116,50 @@
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         });
+
+        const backspaceBtn = document.getElementById('backspaceBtn');
+        if (backspaceBtn) {
+            backspaceBtn.disabled = state;
+            if (state) {
+                backspaceBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                backspaceBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+    }
+
+    function updateControlButtons() {
+        const muteBtn = document.getElementById('muteBtn');
+        const speakerBtn = document.getElementById('speakerBtn');
+        const disabled = !inCall;
+
+        if (muteBtn) {
+            muteBtn.textContent = state.muted ? 'Sourdine' : 'Mute';
+            muteBtn.disabled = disabled;
+            muteBtn.classList.toggle('opacity-50', disabled);
+            muteBtn.classList.toggle('cursor-not-allowed', disabled);
+        }
+
+        if (speakerBtn) {
+            speakerBtn.textContent = state.speaker ? 'Speaker On' : 'Spk';
+            speakerBtn.disabled = disabled;
+            speakerBtn.classList.toggle('opacity-50', disabled);
+            speakerBtn.classList.toggle('cursor-not-allowed', disabled);
+        }
+    }
+
+    function toggleMute() {
+        if (!inCall) return;
+        state.muted = !state.muted;
+        window.dispatchEvent(new CustomEvent('dialer:mute', { detail: { muted: state.muted } }));
+        updateControlButtons();
+    }
+
+    function toggleSpeaker() {
+        if (!inCall) return;
+        state.speaker = !state.speaker;
+        window.dispatchEvent(new CustomEvent('dialer:speaker', { detail: { speaker: state.speaker } }));
+        updateControlButtons();
     }
 
     function formatTime(sec) {
@@ -158,6 +230,7 @@
             callBtn.textContent = 'End';
             callBtn.classList.remove('bg-emerald-500','hover:bg-emerald-400');
             callBtn.classList.add('bg-red-500','hover:bg-red-400');
+            updateControlButtons();
             statusEl.textContent = 'Ringing...';
             clearRinging();
             ringingTimeout = setTimeout(() => {
@@ -207,6 +280,7 @@
             callBtn.textContent = 'Call';
             callBtn.classList.remove('bg-red-500','hover:bg-red-400');
             callBtn.classList.add('bg-emerald-500','hover:bg-emerald-400');
+            updateControlButtons();
 
             if (res.ok && data.success) {
                 document.getElementById('remainingMinutes').textContent = data.remaining_min;
@@ -222,5 +296,7 @@
             statusEl.textContent = error.message || 'Error ending call.';
         }
     }
+
+    updateControlButtons();
 </script>
 @endsection

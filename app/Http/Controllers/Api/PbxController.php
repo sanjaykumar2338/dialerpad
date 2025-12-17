@@ -8,6 +8,7 @@ use App\Models\CallSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PbxController extends Controller
 {
@@ -20,30 +21,55 @@ class PbxController extends Controller
             'token' => ['required', 'uuid'],
         ]);
 
-        $card = CallCard::where('uuid', $data['token'])->first();
+        $token = $data['token'];
+        $card = CallCard::where('uuid', $token)->first();
 
         if (!$card) {
+            Log::info('PBX validate', [
+                'token' => $token,
+                'found' => false,
+                'minutes_left' => null,
+                'status' => null,
+            ]);
+
             return response()->json([
                 'valid' => false,
+                'token' => $token,
                 'reason' => 'not_found',
-            ]);
+            ], 200);
         }
 
-        if ($card->status !== 'active' || $card->remaining_minutes <= 0) {
+        $minutesLeft = max(0, $card->remaining_minutes);
+        $status = $card->status ?? 'unknown';
+        $isExpired = $status !== 'active' || $minutesLeft <= 0;
+        $responseStatus = $isExpired ? 'expired' : 'active';
+        $minutesLeftForReturn = $isExpired ? 0 : $minutesLeft;
+
+        Log::info('PBX validate', [
+            'token' => $token,
+            'found' => true,
+            'minutes_left' => $minutesLeftForReturn,
+            'status' => $responseStatus,
+        ]);
+
+        if ($isExpired) {
             return response()->json([
                 'valid' => false,
+                'token' => $token,
                 'reason' => 'expired',
-                'minutes_left' => 0,
-            ]);
+                'status' => $responseStatus,
+                'minutes_left' => $minutesLeftForReturn,
+            ], 200);
         }
 
         return response()->json([
             'valid' => true,
+            'token' => $token,
             'card_uuid' => $card->uuid,
-            'minutes_left' => $card->remaining_minutes,
+            'minutes_left' => $minutesLeftForReturn,
             'prefix' => $card->prefix,
-            'status' => 'active',
-        ]);
+            'status' => $responseStatus,
+        ], 200);
     }
 
     /**
