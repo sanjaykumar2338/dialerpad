@@ -36,20 +36,19 @@ class DialerController extends Controller
             ], 422);
         }
 
-        $dialed = preg_replace('/\D/', '', $request->dialed_number);
-        if ($dialed === '') {
+        $normalizedNumber = $this->normalizeToE164($request->dialed_number);
+        if ($normalizedNumber === '') {
             return response()->json([
                 'success' => false,
                 'message' => 'Enter a valid number to dial.',
             ], 422);
         }
-        $full = $card->prefix . $dialed;
 
         $session = CallSession::create([
             'call_card_id'   => $card->id,
             'session_uuid'   => Str::uuid(),
-            'dialed_number'  => $dialed,
-            'full_number'    => $full,
+            'dialed_number'  => $normalizedNumber,
+            'full_number'    => $normalizedNumber,
             'started_at'     => now(),
             'status'         => 'started',
         ]);
@@ -103,5 +102,19 @@ class DialerController extends Controller
                 'card_status'   => $card->status,
             ]);
         });
+    }
+
+    private function normalizeToE164(?string $number): string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $number);
+        if ($digits === '') {
+            return '';
+        }
+
+        if (str_starts_with($digits, '223')) {
+            return $digits;
+        }
+
+        return '223' . ltrim($digits, '0');
     }
 }

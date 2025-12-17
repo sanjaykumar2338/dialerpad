@@ -3,7 +3,9 @@
 use App\Http\Controllers\DialerController;
 use App\Http\Controllers\EsimController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Admin\CallCardController;
 use App\Http\Controllers\Admin\CallSessionExportController;
+use App\Http\Controllers\Admin\CallCardExportController;
 use App\Http\Controllers\Admin\EsimCodeController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,8 +19,10 @@ Route::prefix('c')->group(function () {
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
-    Route::resource('call-cards', \App\Http\Controllers\Admin\CallCardController::class);
-    Route::get('call-cards-export', [\App\Http\Controllers\Admin\CallCardExportController::class, 'exportZip'])->name('call-cards.export');
+    Route::resource('call-cards', CallCardController::class);
+    Route::get('call-cards/batch/{batch}/start-download', [CallCardController::class, 'startBatchDownload'])->name('call-cards.batch-start');
+    Route::get('call-cards/batch/{batch}/zip', [CallCardExportController::class, 'exportBatchZip'])->name('call-cards.batch-zip');
+    Route::get('call-cards-export', [CallCardExportController::class, 'exportZip'])->name('call-cards.export');
     Route::get('call-sessions', [\App\Http\Controllers\Admin\CallSessionController::class, 'index'])->name('call-sessions.index');
     Route::get('call-sessions/export', [CallSessionExportController::class, 'export'])->name('call-sessions.export');
     Route::resource('esim-types', \App\Http\Controllers\Admin\EsimTypeController::class);

@@ -45,6 +45,7 @@ class CallCardController extends Controller
         ]);
 
         $quantity = (int) $data['quantity'];
+        $batchId = $quantity > 1 ? (string) Str::uuid() : null;
         $baseName = $quantity > 1 && !empty($data['name_prefix'])
             ? $data['name_prefix']
             : $data['name'];
@@ -57,6 +58,7 @@ class CallCardController extends Controller
                 'notes' => $data['notes'] ?? null,
                 'uuid' => (string) Str::uuid(),
                 'created_by' => Auth::id(),
+                'batch_id' => $batchId,
             ]);
 
             $this->qrCodeService->generateForCallCard($card);
@@ -66,24 +68,35 @@ class CallCardController extends Controller
                 ->with('status', 'Call card created successfully.');
         }
 
-        DB::transaction(function () use ($quantity, $baseName, $data): void {
+        DB::transaction(function () use ($quantity, $baseName, $data, $batchId): void {
             for ($i = 1; $i <= $quantity; $i++) {
                 $card = CallCard::create([
                     'name' => $baseName . ' #' . str_pad((string) $i, 3, '0', STR_PAD_LEFT),
                     'prefix' => $data['prefix'],
                     'total_minutes' => $data['total_minutes'],
-                    'notes' => $data['notes'] ?? null,
-                    'uuid' => (string) Str::uuid(),
-                    'created_by' => Auth::id(),
-                ]);
+                'notes' => $data['notes'] ?? null,
+                'uuid' => (string) Str::uuid(),
+                'created_by' => Auth::id(),
+                'batch_id' => $batchId,
+            ]);
 
-                $this->qrCodeService->generateForCallCard($card);
-            }
+            $this->qrCodeService->generateForCallCard($card);
+        }
         });
 
-        return redirect()
-            ->route('admin.call-cards.index')
-            ->with('status', 'Created ' . $quantity . ' cards successfully.');
+        return redirect()->route('admin.call-cards.batch-start', ['batch' => $batchId]);
+    }
+
+    public function startBatchDownload(string $batch): View
+    {
+        $downloadUrl = route('admin.call-cards.batch-zip', ['batch' => $batch]);
+        $redirectUrl = route('admin.call-cards.index');
+
+        return view('admin.call-cards.batch-download', [
+            'batch' => $batch,
+            'downloadUrl' => $downloadUrl,
+            'redirectUrl' => $redirectUrl,
+        ]);
     }
 
     public function show(CallCard $call_card): View

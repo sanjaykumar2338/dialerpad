@@ -21,6 +21,7 @@ class CallCard extends Model
         'status',
         'notes',
         'created_by',
+        'batch_id',
     ];
 
     protected $appends = [

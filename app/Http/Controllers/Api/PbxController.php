@@ -7,6 +7,7 @@ use App\Models\CallCard;
 use App\Models\CallSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -16,7 +17,7 @@ class PbxController extends Controller
     /**
      * Validate a call card token for PBX.
      */
-    public function validate(Request $request): JsonResponse
+    public function validate(Request $request): JsonResponse|Response
     {
         $validator = Validator::make($request->all(), [
             'token' => ['required', 'uuid'],
@@ -34,11 +35,11 @@ class PbxController extends Controller
                 'errors' => $validator->errors()->all(),
             ]);
 
-            return response()->json([
+            return $this->respondPbx($request, [
                 'valid' => false,
                 'token' => $token,
                 'reason' => 'invalid_token',
-            ], 200);
+            ], false);
         }
 
         $token = $validator->validated()['token'];
@@ -52,11 +53,11 @@ class PbxController extends Controller
                 'status' => null,
             ]);
 
-            return response()->json([
+            return $this->respondPbx($request, [
                 'valid' => false,
                 'token' => $token,
                 'reason' => 'not_found',
-            ], 200);
+            ], false);
         }
 
         $minutesLeft = max(0, $card->remaining_minutes);
@@ -73,23 +74,23 @@ class PbxController extends Controller
         ]);
 
         if ($isExpired) {
-            return response()->json([
+            return $this->respondPbx($request, [
                 'valid' => false,
                 'token' => $token,
                 'reason' => 'expired',
                 'status' => $responseStatus,
                 'minutes_left' => $minutesLeftForReturn,
-            ], 200);
+            ], false);
         }
 
-        return response()->json([
+        return $this->respondPbx($request, [
             'valid' => true,
             'token' => $token,
             'card_uuid' => $card->uuid,
             'minutes_left' => $minutesLeftForReturn,
             'prefix' => $card->prefix,
             'status' => $responseStatus,
-        ], 200);
+        ], true);
     }
 
     /**
@@ -160,7 +161,11 @@ class PbxController extends Controller
                 ]);
             }
 
-            $dialedNumber = $data['dialed_number'] ?? $session->dialed_number ?? 'unknown';
+            $normalizedNumber = $data['dialed_number']
+                ? $this->normalizeToE164($data['dialed_number'])
+                : null;
+
+            $dialedNumber = $normalizedNumber ?? $session?->dialed_number ?? 'unknown';
 
             $session->fill([
                 'call_card_id' => $lockedCard->id,
@@ -181,5 +186,35 @@ class PbxController extends Controller
                 'card_status' => $lockedCard->status,
             ]);
         });
+    }
+
+    private function normalizeToE164(?string $number): string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $number);
+        if ($digits === '') {
+            return '';
+        }
+
+        if (str_starts_with($digits, '223')) {
+            return $digits;
+        }
+
+        return '223' . ltrim($digits, '0');
+    }
+
+    private function wantsJson(Request $request): bool
+    {
+        $accept = (string) $request->header('Accept');
+        return str_contains($accept, 'application/json');
+    }
+
+    private function respondPbx(Request $request, array $jsonPayload, bool $valid): JsonResponse|Response
+    {
+        if ($this->wantsJson($request)) {
+            return response()->json($jsonPayload, 200);
+        }
+
+        return response($valid ? 'valid' : 'invalid', 200)
+            ->header('Content-Type', 'text/plain');
     }
 }

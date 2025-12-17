@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CallCard;
 use App\Services\QrCodeService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -18,7 +19,7 @@ class CallCardExportController extends Controller
     ) {
     }
 
-    public function exportZip(Request $request): BinaryFileResponse
+    public function exportZip(Request $request): BinaryFileResponse|RedirectResponse
     {
         $query = CallCard::query();
 
@@ -66,6 +67,55 @@ class CallCardExportController extends Controller
                 $zipName = Str::slug($card->name) . '-' . $card->uuid . '.png';
                 $zip->addFile($absolute, $zipName);
             }
+        }
+
+        $zip->close();
+
+        return response()->download($zipPath, $filename)->deleteFileAfterSend();
+    }
+
+    public function exportBatchZip(string $batch): BinaryFileResponse|RedirectResponse
+    {
+        $cards = CallCard::where('batch_id', $batch)
+            ->orderBy('created_at')
+            ->get();
+
+        if ($cards->isEmpty()) {
+            return redirect()
+                ->route('admin.call-cards.index')
+                ->with('status', 'No call cards found for that batch.');
+        }
+
+        $tmpDir = storage_path('app/tmp');
+        if (!is_dir($tmpDir)) {
+            mkdir($tmpDir, 0755, true);
+        }
+
+        $filename = 'call-cards-batch-' . Str::slug($batch) . '.zip';
+        $zipPath = $tmpDir . '/' . $filename;
+
+        if (file_exists($zipPath)) {
+            unlink($zipPath);
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            return redirect()
+                ->route('admin.call-cards.index')
+                ->with('status', 'Unable to create ZIP file.');
+        }
+
+        $i = 1;
+        foreach ($cards as $card) {
+            $this->qrCodeService->generateForCallCard($card);
+            $relative = 'qrcodes/' . $card->uuid . '.png';
+            $absolute = storage_path('app/public/' . $relative);
+
+            if (file_exists($absolute)) {
+                $zip->addFile($absolute, 'qr' . $i . '.png');
+            }
+
+            $i++;
         }
 
         $zip->close();
