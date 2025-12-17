@@ -22,6 +22,7 @@
                     <tr>
                         <th>Label</th>
                         <th>Plan</th>
+                        <th>Product ID</th>
                         <th>UUID / Link</th>
                         <th>Status</th>
                         <th>QR</th>
@@ -34,12 +35,17 @@
                         <tr>
                             <td>{{ $code->label ?? '—' }}</td>
                             <td>{{ $code->type?->name ?? '—' }}</td>
+                            <td>{{ $code->product_id ?? '—' }}</td>
                             <td class="text-break">
                                 <div class="small text-muted">{{ $code->uuid }}</div>
                                 <a href="{{ url('/esim/' . $code->uuid) }}" target="_blank" class="text-emerald-300 small">Open</a>
                             </td>
                             <td>
-                                <span class="badge {{ $code->status === 'active' ? 'bg-success' : 'bg-secondary' }}">
+                                <span class="badge
+                                    @if($code->status === 'unused') bg-success
+                                    @elseif($code->status === 'used') bg-secondary
+                                    @else bg-warning text-dark
+                                    @endif">
                                     {{ ucfirst($code->status) }}
                                 </span>
                             </td>
@@ -61,7 +67,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted">No eSIM codes yet.</td>
+                            <td colspan="8" class="text-center text-muted">No eSIM codes yet.</td>
                         </tr>
                     @endforelse
                 </tbody>

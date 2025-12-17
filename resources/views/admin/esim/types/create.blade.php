@@ -22,8 +22,19 @@
                     <input type="text" name="name" id="name" value="{{ old('name') }}" class="form-control" required>
                 </div>
                 <div class="col-md-6">
+                    <label for="product_id" class="form-label">Product ID (Mobimatter)</label>
+                    <input type="text" name="product_id" id="product_id" value="{{ old('product_id') }}" class="form-control" required>
+                </div>
+                <div class="col-md-6">
                     <label for="provider_reference_code" class="form-label">Provider Reference Code</label>
                     <input type="text" name="provider_reference_code" id="provider_reference_code" value="{{ old('provider_reference_code') }}" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="active" @selected(old('status', 'active') === 'active')>Active</option>
+                        <option value="inactive" @selected(old('status') === 'inactive')>Inactive</option>
+                    </select>
                 </div>
                 <div class="col-12">
                     <label for="description" class="form-label">Description</label>

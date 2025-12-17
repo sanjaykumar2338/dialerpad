@@ -22,7 +22,9 @@
                     <label for="esim_type_id" class="form-label">Plan</label>
                     <select name="esim_type_id" id="esim_type_id" class="form-select" required>
                         @foreach ($types as $type)
-                            <option value="{{ $type->id }}" @selected($code->esim_type_id == $type->id)>{{ $type->name }}</option>
+                            <option value="{{ $type->id }}" @selected($code->esim_type_id == $type->id)">
+                                {{ $type->name }} @if($type->product_id) — {{ $type->product_id }} @endif
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -33,9 +35,14 @@
                 <div class="col-md-6">
                     <label for="status" class="form-label">Status</label>
                     <select name="status" id="status" class="form-select" required>
-                        <option value="active" @selected($code->status === 'active')>Active</option>
+                        <option value="unused" @selected($code->status === 'unused')>Unused</option>
+                        <option value="used" @selected($code->status === 'used')>Used</option>
                         <option value="disabled" @selected($code->status === 'disabled')>Disabled</option>
                     </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Product ID (derived from plan)</label>
+                    <div class="form-control bg-dark text-white">{{ $code->product_id ?? '—' }}</div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Public Link</label>

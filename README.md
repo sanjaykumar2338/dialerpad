@@ -40,6 +40,17 @@ Default admin: `admin@example.com` / `password` (change after first login).
 - **Public Dialer**: `/c/{uuid}` shows keypad with prefix + timer. Start/End calls hit `/start-call` and `/end-call` endpoints; UI updates remaining minutes and blocks expired cards. (No real telephony yet.)
 - **eSIM Activation (UI-only)**: `/esim/activate` collects requests (name, email, phone, device, selected eSIM type). Admin can manage types and requests in `/admin/esim-types` and `/admin/esim-requests`. API to Mobimatter/FreePBX is intentionally not wired yet.
 
+## PBX Integration (Phase A)
+- **Validate card**: `GET /api/pbx/validate?token={card_uuid}`  
+  - Success: `{"valid":true,"card_uuid":"{uuid}","minutes_left":87,"prefix":"+234","status":"active"}`  
+  - Not found: `{"valid":false,"reason":"not_found"}`  
+  - Expired/out-of-minutes: `{"valid":false,"reason":"expired","minutes_left":0}`
+- **End call**: `POST /api/pbx/call-end` (JSON)  
+  - Body: `{"token":"{card_uuid}","call_id":"pbx-123","duration_seconds":125,"dialed_number":"2348012345678"}`  
+  - Billed minutes = `ceil(duration_seconds/60)` (minimum 1 if duration > 0). Minutes are deducted but never below 0; card auto-expires at 0.  
+  - Success: `{"ok":true,"billed_minutes":3,"minutes_left":42,"card_status":"active"}`  
+  - Expired/not found: `{"ok":false,"reason":"expired","minutes_left":0,"card_status":"expired"}` or `{"ok":false,"reason":"not_found"}`
+
 ## Notes & limitations
 - Telephony is simulated: endpoints create sessions and decrement minutes but do not place real calls.
 - eSIM API integration is pending; requests are stored for manual processing.

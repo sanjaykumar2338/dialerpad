@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'mobimatter' => [
+        'merchant_id' => env('MOBIMATTER_MERCHANT_ID'),
+        'api_key' => env('MOBIMATTER_API_KEY'),
+        'base_url' => env('MOBIMATTER_API_BASE', 'https://api.mobimatter.com'),
+    ],
+
 ];

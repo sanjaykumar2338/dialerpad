@@ -38,7 +38,7 @@ class CallSessionController extends Controller
 
         $sessions = $query->paginate(10)->withQueryString();
         $cards = CallCard::orderBy('name')->pluck('name', 'id');
-        $statuses = ['started', 'completed', 'failed', 'cancelled'];
+        $statuses = ['started', 'completed', 'ended', 'failed', 'cancelled'];
 
         return view('admin.call-sessions.index', compact('sessions', 'cards', 'statuses', 'filters'));
     }

@@ -12,8 +12,10 @@ class EsimType extends Model
 
     protected $fillable = [
         'name',
+        'product_id',
         'provider_reference_code',
         'description',
+        'status',
     ];
 
     public function activations(): HasMany

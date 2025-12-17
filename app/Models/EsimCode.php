@@ -14,8 +14,14 @@ class EsimCode extends Model
     protected $fillable = [
         'uuid',
         'esim_type_id',
+        'product_id',
         'label',
         'status',
+        'used_at',
+    ];
+
+    protected $casts = [
+        'used_at' => 'datetime',
     ];
 
     public function type(): BelongsTo

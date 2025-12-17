@@ -65,6 +65,7 @@
                             <td>
                                 <span class="badge
                                     @if($session->status === 'completed') bg-success
+                                    @elseif($session->status === 'ended') bg-secondary
                                     @elseif($session->status === 'failed') bg-danger
                                     @elseif($session->status === 'cancelled') bg-warning text-dark
                                     @else bg-info text-dark

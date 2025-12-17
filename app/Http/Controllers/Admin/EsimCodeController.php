@@ -8,6 +8,7 @@ use App\Models\EsimType;
 use App\Services\QrCodeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Illuminate\Support\Str;
 
@@ -22,7 +23,7 @@ class EsimCodeController extends Controller
 
     public function create(): View
     {
-        $types = EsimType::orderBy('name')->get();
+        $types = EsimType::where('status', 'active')->orderBy('name')->get();
 
         return view('admin.esim.codes.create', compact('types'));
     }
@@ -32,24 +33,42 @@ class EsimCodeController extends Controller
         $data = $request->validate([
             'esim_type_id' => ['required', 'exists:esim_types,id'],
             'label' => ['nullable', 'string', 'max:255'],
+            'quantity' => ['required', 'integer', 'min:1'],
         ]);
 
-        $code = EsimCode::create([
-            'uuid' => (string) Str::uuid(),
-            'esim_type_id' => $data['esim_type_id'],
-            'label' => $data['label'] ?? null,
-            'status' => 'active',
-        ]);
+        $type = EsimType::findOrFail($data['esim_type_id']);
+        $quantity = (int) $data['quantity'];
 
-        $url = url('/esim/' . $code->uuid);
-        $qr->generateForEsimCode($code, $url);
+        if (empty($type->product_id)) {
+            return back()
+                ->withInput()
+                ->withErrors('Selected plan is missing a Mobimatter product ID.');
+        }
 
-        return redirect()->route('admin.esim-codes.index')->with('success', 'eSIM QR created successfully.');
+        DB::transaction(function () use ($quantity, $type, $data, $qr): void {
+            for ($i = 1; $i <= $quantity; $i++) {
+                $code = EsimCode::create([
+                    'uuid' => (string) Str::uuid(),
+                    'esim_type_id' => $type->id,
+                    'product_id' => $type->product_id,
+                    'label' => $data['label'] ?? null,
+                    'status' => 'unused',
+                ]);
+
+                $url = url('/esim/' . $code->uuid);
+                $qr->generateForEsimCode($code, $url);
+            }
+        });
+
+        return redirect()->route('admin.esim-codes.index')->with('success', "eSIM QR created successfully ({$quantity})");
     }
 
     public function edit(EsimCode $esimCode): View
     {
-        $types = EsimType::orderBy('name')->get();
+        $types = EsimType::where('status', 'active')
+            ->orWhere('id', $esimCode->esim_type_id)
+            ->orderBy('name')
+            ->get();
 
         return view('admin.esim.codes.edit', [
             'code' => $esimCode,
@@ -62,10 +81,21 @@ class EsimCodeController extends Controller
         $data = $request->validate([
             'esim_type_id' => ['required', 'exists:esim_types,id'],
             'label' => ['nullable', 'string', 'max:255'],
-            'status' => ['required', 'in:active,disabled'],
+            'status' => ['required', 'in:unused,used,disabled'],
         ]);
 
-        $esimCode->update($data);
+        $type = EsimType::findOrFail($data['esim_type_id']);
+
+        if ($esimCode->status === 'used' && $data['status'] !== 'used') {
+            return back()
+                ->withInput()
+                ->withErrors('Used codes cannot be reactivated.');
+        }
+
+        $esimCode->update([
+            ...$data,
+            'product_id' => $type->product_id,
+        ]);
 
         return redirect()->route('admin.esim-codes.index')->with('success', 'eSIM QR updated.');
     }

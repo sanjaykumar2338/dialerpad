@@ -20,7 +20,7 @@ class CallCardExportController extends Controller
 
     public function exportZip(Request $request): BinaryFileResponse
     {
-        $query = CallCard::where('status', 'active');
+        $query = CallCard::query();
 
         if ($request->filled('ids')) {
             $ids = $this->parseIds($request->input('ids'));
@@ -34,7 +34,7 @@ class CallCardExportController extends Controller
         if ($cards->isEmpty()) {
             return redirect()
                 ->route('admin.call-cards.index')
-                ->with('status', 'No active call cards available for export.');
+                ->with('status', 'No call cards available for export.');
         }
 
         // Ensure temp directory exists on the local disk (not the public disk).

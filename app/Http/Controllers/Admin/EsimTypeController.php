@@ -26,8 +26,10 @@ class EsimTypeController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'product_id' => ['required', 'string', 'max:255'],
             'provider_reference_code' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'status' => ['required', 'in:active,inactive'],
         ]);
 
         EsimType::create($data);
@@ -44,8 +46,10 @@ class EsimTypeController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'product_id' => ['required', 'string', 'max:255'],
             'provider_reference_code' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'status' => ['required', 'in:active,inactive'],
         ]);
 
         $esim_type->update($data);

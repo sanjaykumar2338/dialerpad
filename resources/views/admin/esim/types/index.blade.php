@@ -20,7 +20,9 @@
                 <thead>
                     <tr>
                         <th>Name</th>
+                        <th>Product ID</th>
                         <th>Provider Ref</th>
+                        <th>Status</th>
                         <th>Description</th>
                         <th>Created</th>
                         <th class="text-end">Actions</th>
@@ -30,7 +32,13 @@
                     @forelse ($types as $type)
                         <tr>
                             <td class="fw-semibold">{{ $type->name }}</td>
+                            <td>{{ $type->product_id ?? '—' }}</td>
                             <td>{{ $type->provider_reference_code ?? '—' }}</td>
+                            <td>
+                                <span class="badge {{ $type->status === 'active' ? 'bg-success' : 'bg-secondary' }}">
+                                    {{ ucfirst($type->status ?? 'inactive') }}
+                                </span>
+                            </td>
                             <td style="max-width: 320px;">{{ \Illuminate\Support\Str::limit($type->description, 120) ?: '—' }}</td>
                             <td>{{ $type->created_at->format('Y-m-d') }}</td>
                             <td class="text-end">
@@ -44,7 +52,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted">No eSIM types found.</td>
+                            <td colspan="7" class="text-center text-muted">No eSIM types found.</td>
                         </tr>
                     @endforelse
                 </tbody>

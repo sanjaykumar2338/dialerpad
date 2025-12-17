@@ -22,9 +22,15 @@
                     <select name="esim_type_id" id="esim_type_id" class="form-select" required>
                         <option value="">Select plan</option>
                         @foreach ($types as $type)
-                            <option value="{{ $type->id }}" @selected(old('esim_type_id') == $type->id)>{{ $type->name }}</option>
+                            <option value="{{ $type->id }}" @selected(old('esim_type_id') == $type->id)">
+                                {{ $type->name }} @if($type->product_id) — {{ $type->product_id }} @endif
+                            </option>
                         @endforeach
                     </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="quantity" class="form-label">Quantity</label>
+                    <input type="number" id="quantity" name="quantity" value="{{ old('quantity', 1) }}" min="1" class="form-control" required>
                 </div>
                 <div class="col-md-6">
                     <label for="label" class="form-label">Label (optional)</label>

@@ -9,18 +9,18 @@
             </div>
             <h1 class="text-3xl font-semibold leading-tight">You’re activating: <span class="text-emerald-400">{{ $type->name }}</span></h1>
             <p class="text-slate-300 text-sm leading-relaxed">
-                This QR is tied to the plan above. Share your contact and device details and we’ll email the eSIM after manual review.
+                This QR is tied to the plan above. Share your contact and device details and we’ll email you the live eSIM QR after activation.
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div class="p-3 rounded-xl border border-slate-800 bg-white/5">
                     <div class="text-xs uppercase tracking-[0.2em] text-slate-400 mb-1">Processing</div>
-                    <div class="text-lg font-semibold">Manual review</div>
-                    <p class="text-slate-400 text-sm">We’ll match the best plan and send the QR.</p>
+                    <div class="text-lg font-semibold">Instant email</div>
+                    <p class="text-slate-400 text-sm">We activate and email the QR to you.</p>
                 </div>
                 <div class="p-3 rounded-xl border border-slate-800 bg-white/5">
                     <div class="text-xs uppercase tracking-[0.2em] text-slate-400 mb-1">Status</div>
                     <div class="text-lg font-semibold">Pending → Processed</div>
-                    <p class="text-slate-400 text-sm">Track requests in the admin panel.</p>
+                    <p class="text-slate-400 text-sm">Each QR can be used once.</p>
                 </div>
             </div>
         </div>
