@@ -36,7 +36,7 @@ class DialerController extends Controller
             ], 422);
         }
 
-        $normalizedNumber = $this->normalizeToE164($request->dialed_number);
+        $normalizedNumber = $this->normalizeToE164($request->dialed_number, $card->prefix);
         if ($normalizedNumber === '') {
             return response()->json([
                 'success' => false,
@@ -104,17 +104,50 @@ class DialerController extends Controller
         });
     }
 
-    private function normalizeToE164(?string $number): string
+    private function normalizeToE164(?string $number, ?string $enforcedPrefix = null): string
     {
         $digits = preg_replace('/\D+/', '', (string) $number);
         if ($digits === '') {
             return '';
         }
 
-        if (str_starts_with($digits, '223')) {
+        $defaultPrefix = $this->dialPrefixDefault();
+        $gatewayPrefix = $this->dialPrefixGateway();
+        $gatewayCombo = $gatewayPrefix !== '' ? $gatewayPrefix . $defaultPrefix : '';
+
+        if ($gatewayCombo !== '' && str_starts_with($digits, $gatewayCombo)) {
             return $digits;
         }
 
-        return '223' . ltrim($digits, '0');
+        $enforcedPrefix = $this->resolveDialPrefix($enforcedPrefix);
+        if ($enforcedPrefix !== '' && str_starts_with($digits, $enforcedPrefix)) {
+            return $digits;
+        }
+
+        if ($gatewayCombo !== '' && $enforcedPrefix === $gatewayCombo && str_starts_with($digits, $defaultPrefix)) {
+            return $gatewayPrefix . $digits;
+        }
+
+        return $enforcedPrefix . ltrim($digits, '0');
+    }
+
+    private function resolveDialPrefix(?string $prefix): string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $prefix);
+        if ($digits !== '') {
+            return $digits;
+        }
+
+        return $this->dialPrefixDefault();
+    }
+
+    private function dialPrefixDefault(): string
+    {
+        return preg_replace('/\D+/', '', (string) config('pbx.dial_prefix_default', '223'));
+    }
+
+    private function dialPrefixGateway(): string
+    {
+        return preg_replace('/\D+/', '', (string) config('pbx.dial_prefix_gateway', ''));
     }
 }

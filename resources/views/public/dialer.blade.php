@@ -16,6 +16,7 @@
             <div class="text-2xl font-semibold tracking-wide">
                 {{ $card->prefix }}<span id="dialedNumberDisplay"></span>
             </div>
+            <div id="dialingPreview" class="text-xs text-slate-500 mt-1"></div>
         </div>
 
         <div class="mb-4 flex justify-center">
@@ -85,11 +86,17 @@
         muted: false,
         speaker: false,
     };
+    const cardPrefix = @json($card->prefix);
+    const dialPrefixDefault = @json(config('pbx.dial_prefix_default', '223'));
+    const dialPrefixGateway = @json(config('pbx.dial_prefix_gateway', ''));
 
     function renderNumber() {
         const input = document.getElementById('dialedNumber');
         const display = document.getElementById('dialedNumberDisplay');
         display.textContent = input.value;
+        if (!inCall) {
+            setDialingPreview('');
+        }
     }
 
     function appendDigit(digit) {
@@ -162,6 +169,52 @@
         updateControlButtons();
     }
 
+    function sanitizeDigits(value) {
+        return String(value || '').replace(/\D+/g, '');
+    }
+
+    function resolveDialPrefix() {
+        const cardDigits = sanitizeDigits(cardPrefix);
+        if (cardDigits) {
+            return cardDigits;
+        }
+
+        return sanitizeDigits(dialPrefixDefault) || '223';
+    }
+
+    function normalizeDialNumber(value) {
+        const digits = sanitizeDigits(value);
+        if (!digits) {
+            return '';
+        }
+
+        const defaultPrefix = sanitizeDigits(dialPrefixDefault) || '223';
+        const gatewayPrefix = sanitizeDigits(dialPrefixGateway);
+        const gatewayCombo = gatewayPrefix ? `${gatewayPrefix}${defaultPrefix}` : '';
+
+        if (gatewayCombo && digits.startsWith(gatewayCombo)) {
+            return digits;
+        }
+
+        const enforcedPrefix = resolveDialPrefix();
+        if (digits.startsWith(enforcedPrefix)) {
+            return digits;
+        }
+
+        if (gatewayCombo && enforcedPrefix === gatewayCombo && digits.startsWith(defaultPrefix)) {
+            return `${gatewayPrefix}${digits}`;
+        }
+
+        return `${enforcedPrefix}${digits.replace(/^0+/, '')}`;
+    }
+
+    function setDialingPreview(value) {
+        const preview = document.getElementById('dialingPreview');
+        if (preview) {
+            preview.textContent = value ? `Dialing: ${value}` : '';
+        }
+    }
+
     function formatTime(sec) {
         const m = String(Math.floor(sec / 60)).padStart(2, '0');
         const s = String(sec % 60).padStart(2, '0');
@@ -202,11 +255,14 @@
         const statusEl = document.getElementById('statusMessage');
         const callBtn = document.getElementById('callBtn');
 
-        if (!number) {
+        const normalizedNumber = normalizeDialNumber(number);
+
+        if (!normalizedNumber) {
             statusEl.textContent = 'Please enter a number to call.';
             return;
         }
 
+        setDialingPreview(normalizedNumber);
         statusEl.textContent = 'Starting call...';
         setKeypadDisabled(true);
 
@@ -217,7 +273,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
                 },
-                body: JSON.stringify({ dialed_number: number })
+                body: JSON.stringify({ dialed_number: normalizedNumber })
             });
 
             const data = await res.json();
@@ -281,6 +337,7 @@
             callBtn.classList.remove('bg-red-500','hover:bg-red-400');
             callBtn.classList.add('bg-emerald-500','hover:bg-emerald-400');
             updateControlButtons();
+            setDialingPreview('');
 
             if (res.ok && data.success) {
                 document.getElementById('remainingMinutes').textContent = data.remaining_min;
