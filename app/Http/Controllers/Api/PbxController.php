@@ -17,7 +17,7 @@ class PbxController extends Controller
     /**
      * Validate a call card token for PBX.
      */
-    public function validate(Request $request): JsonResponse|Response
+    public function validate(Request $request): Response
     {
         $validator = Validator::make($request->all(), [
             'token' => ['required', 'uuid'],
@@ -35,11 +35,7 @@ class PbxController extends Controller
                 'errors' => $validator->errors()->all(),
             ]);
 
-            return $this->respondPbx($request, [
-                'valid' => false,
-                'token' => $token,
-                'reason' => 'invalid_token',
-            ], false);
+            return response('invalid', 403)->header('Content-Type', 'text/plain');
         }
 
         $token = $validator->validated()['token'];
@@ -53,11 +49,7 @@ class PbxController extends Controller
                 'status' => null,
             ]);
 
-            return $this->respondPbx($request, [
-                'valid' => false,
-                'token' => $token,
-                'reason' => 'not_found',
-            ], false);
+            return response('invalid', 403)->header('Content-Type', 'text/plain');
         }
 
         $minutesLeft = max(0, $card->remaining_minutes);
@@ -74,23 +66,10 @@ class PbxController extends Controller
         ]);
 
         if ($isExpired) {
-            return $this->respondPbx($request, [
-                'valid' => false,
-                'token' => $token,
-                'reason' => 'expired',
-                'status' => $responseStatus,
-                'minutes_left' => $minutesLeftForReturn,
-            ], false);
+            return response('expired', 403)->header('Content-Type', 'text/plain');
         }
 
-        return $this->respondPbx($request, [
-            'valid' => true,
-            'token' => $token,
-            'card_uuid' => $card->uuid,
-            'minutes_left' => $minutesLeftForReturn,
-            'prefix' => $card->prefix,
-            'status' => $responseStatus,
-        ], true);
+        return response('valid', 200)->header('Content-Type', 'text/plain');
     }
 
     /**
@@ -235,19 +214,4 @@ class PbxController extends Controller
         return preg_replace('/\D+/', '', (string) config('pbx.dial_prefix_gateway', ''));
     }
 
-    private function wantsJson(Request $request): bool
-    {
-        $accept = (string) $request->header('Accept');
-        return str_contains($accept, 'application/json');
-    }
-
-    private function respondPbx(Request $request, array $jsonPayload, bool $valid): JsonResponse|Response
-    {
-        if ($this->wantsJson($request)) {
-            return response()->json($jsonPayload, 200);
-        }
-
-        return response($valid ? 'valid' : 'invalid', 200)
-            ->header('Content-Type', 'text/plain');
-    }
 }
