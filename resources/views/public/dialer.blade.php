@@ -1,7 +1,32 @@
 @extends('layouts.public')
 
 @section('content')
-<div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 text-white">
+<style>
+    html, body {
+        touch-action: manipulation;
+        overscroll-behavior: none;
+    }
+
+    .dialer,
+    .dialer * {
+        touch-action: manipulation;
+    }
+
+    .dialer-key {
+        font-size: 18px;
+        min-width: 64px;
+        min-height: 64px;
+        border-radius: 50%;
+    }
+
+    .dialer-wrapper {
+        height: 100vh;
+        max-height: 100vh;
+        overflow: hidden;
+    }
+</style>
+
+<div class="dialer-wrapper dialer min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 text-white">
     <div class="w-full max-w-sm bg-slate-900/80 rounded-3xl p-6 shadow-xl border border-slate-700">
         <div class="mb-4 text-center">
             <div class="text-xs uppercase tracking-widest text-slate-400 mb-1">Call Card</div>
@@ -33,7 +58,8 @@
         <div id="keypad" class="grid grid-cols-3 gap-3 mb-4 text-xl">
             @foreach (['1','2','3','4','5','6','7','8','9','*','0','#'] as $key)
                 <button type="button"
-                        class="py-3 rounded-full bg-slate-800 hover:bg-slate-700 transition"
+                        class="dialer-key py-3 rounded-full bg-slate-800 hover:bg-slate-700 transition"
+                        tabindex="-1"
                         onclick="appendDigit('{{ $key }}')">
                     {{ $key }}
                 </button>
@@ -82,6 +108,7 @@
     let timerInterval = null;
     let elapsedSeconds = 0;
     let ringingTimeout = null;
+    let micStream = null;
     const state = {
         muted: false,
         speaker: false,
@@ -215,6 +242,32 @@
         }
     }
 
+    async function ensureMicrophoneAccess() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            return true;
+        }
+
+        if (micStream) {
+            return true;
+        }
+
+        try {
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function stopMicrophoneAccess() {
+        if (!micStream) {
+            return;
+        }
+
+        micStream.getTracks().forEach((track) => track.stop());
+        micStream = null;
+    }
+
     function formatTime(sec) {
         const m = String(Math.floor(sec / 60)).padStart(2, '0');
         const s = String(sec % 60).padStart(2, '0');
@@ -263,6 +316,15 @@
         }
 
         setDialingPreview(normalizedNumber);
+        statusEl.textContent = 'Checking microphone...';
+
+        const micOk = await ensureMicrophoneAccess();
+        if (!micOk) {
+            statusEl.textContent = 'Microphone access is required to place a call.';
+            setDialingPreview('');
+            return;
+        }
+
         statusEl.textContent = 'Starting call...';
         setKeypadDisabled(true);
 
@@ -298,6 +360,7 @@
         } catch (error) {
             statusEl.textContent = error.message || 'Unable to start call.';
             setKeypadDisabled(false);
+            stopMicrophoneAccess();
         }
     }
 
@@ -338,6 +401,7 @@
             callBtn.classList.add('bg-emerald-500','hover:bg-emerald-400');
             updateControlButtons();
             setDialingPreview('');
+            stopMicrophoneAccess();
 
             if (res.ok && data.success) {
                 document.getElementById('remainingMinutes').textContent = data.remaining_min;
