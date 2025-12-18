@@ -17,13 +17,29 @@
         min-width: 64px;
         min-height: 64px;
         border-radius: 50%;
+        touch-action: manipulation;
     }
 
-    #dialNumber {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    .number-wrap {
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 14px;
+    }
+
+    .dial-number {
+        font-weight: 700;
+        letter-spacing: 1px;
+        line-height: 1;
         white-space: nowrap;
+        overflow: visible;
+        text-align: center;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        transform: translateZ(0);
+        will-change: font-size;
     }
 
     .dialer-wrapper {
@@ -45,8 +61,8 @@
 
         <div class="mb-4 text-center">
             <div class="text-xs text-slate-500">Number</div>
-            <div id="dialNumber" class="text-2xl font-semibold tracking-wide">
-                <span id="dialedNumberDisplay"></span>
+            <div class="number-wrap">
+                <div id="dialNumber" class="dial-number" aria-label="Dialed number"> </div>
             </div>
             <div id="dialingPreview" class="text-xs text-slate-500 mt-1"></div>
         </div>
@@ -127,16 +143,45 @@
     const dialPrefixGateway = @json(config('pbx.dial_prefix_gateway', ''));
     const MAX_DIGITS = 15;
 
+    function getFontSizeByLength(len) {
+        if (len <= 6) return 44;
+        if (len <= 9) return 38;
+        if (len <= 12) return 32;
+        if (len <= 15) return 28;
+        if (len <= 18) return 24;
+        return 20;
+    }
+
+    function updateDialNumberUI(value) {
+        const el = document.getElementById('dialNumber');
+        if (!el) return;
+
+        const digits = String(value || '');
+        el.textContent = digits.length ? digits : ' ';
+
+        let size = getFontSizeByLength(digits.length);
+        el.style.fontSize = `${size}px`;
+
+        const wrap = el.parentElement;
+        if (wrap) {
+            let guard = 0;
+            while (el.scrollWidth > wrap.clientWidth && size > 12 && guard < 30) {
+                size -= 1;
+                el.style.fontSize = `${size}px`;
+                guard++;
+            }
+        }
+    }
+
     function renderNumber() {
         const input = document.getElementById('dialedNumber');
-        const display = document.getElementById('dialedNumberDisplay');
         const rawDigits = sanitizeDigits(input.value);
         if (input.value !== rawDigits) {
             input.value = rawDigits;
         }
 
         const normalized = rawDigits ? normalizeDialNumber(rawDigits) : resolveDialPrefix();
-        display.textContent = formatDisplayNumber(normalized);
+        updateDialNumberUI(normalized);
         if (!inCall) {
             setDialingPreview('');
         }
@@ -268,21 +313,6 @@
         }
 
         return normalized;
-    }
-
-    function formatDisplayNumber(raw) {
-        const digits = sanitizeDigits(raw);
-        if (!digits) {
-            return '';
-        }
-
-        const head = 6;
-        const tail = 4;
-        if (digits.length <= head + tail) {
-            return digits;
-        }
-
-        return `${digits.slice(0, head)}...${digits.slice(-tail)}`;
     }
 
     function setDialingPreview(value) {
