@@ -19,6 +19,13 @@
         border-radius: 50%;
     }
 
+    #dialNumber {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     .dialer-wrapper {
         height: 100vh;
         max-height: 100vh;
@@ -38,8 +45,8 @@
 
         <div class="mb-4 text-center">
             <div class="text-xs text-slate-500">Number</div>
-            <div class="text-2xl font-semibold tracking-wide">
-                {{ $card->prefix }}<span id="dialedNumberDisplay"></span>
+            <div id="dialNumber" class="text-2xl font-semibold tracking-wide">
+                <span id="dialedNumberDisplay"></span>
             </div>
             <div id="dialingPreview" class="text-xs text-slate-500 mt-1"></div>
         </div>
@@ -109,6 +116,8 @@
     let elapsedSeconds = 0;
     let ringingTimeout = null;
     let micStream = null;
+    let backspaceHoldTimer = null;
+    let backspaceLongPress = false;
     const state = {
         muted: false,
         speaker: false,
@@ -116,11 +125,18 @@
     const cardPrefix = @json($card->prefix);
     const dialPrefixDefault = @json(config('pbx.dial_prefix_default', '223'));
     const dialPrefixGateway = @json(config('pbx.dial_prefix_gateway', ''));
+    const MAX_DIGITS = 15;
 
     function renderNumber() {
         const input = document.getElementById('dialedNumber');
         const display = document.getElementById('dialedNumberDisplay');
-        display.textContent = input.value;
+        const rawDigits = sanitizeDigits(input.value);
+        if (input.value !== rawDigits) {
+            input.value = rawDigits;
+        }
+
+        const normalized = rawDigits ? normalizeDialNumber(rawDigits) : resolveDialPrefix();
+        display.textContent = formatDisplayNumber(normalized);
         if (!inCall) {
             setDialingPreview('');
         }
@@ -128,16 +144,33 @@
 
     function appendDigit(digit) {
         if (inCall) return;
+        if (!/^\d$/.test(digit)) return;
         const input  = document.getElementById('dialedNumber');
-        input.value += digit;
+        const nextValue = sanitizeDigits(`${input.value}${digit}`);
+        const normalized = normalizeDialNumber(nextValue, { enforceMax: false });
+        if (normalized.length > MAX_DIGITS) {
+            return;
+        }
+        input.value = nextValue;
         renderNumber();
     }
 
     function backspace() {
         if (inCall) return;
         const input = document.getElementById('dialedNumber');
-        if (!input.value) return;
-        input.value = input.value.slice(0, -1);
+        if (backspaceLongPress) {
+            backspaceLongPress = false;
+            return;
+        }
+        const digits = sanitizeDigits(input.value);
+        if (!digits) return;
+        input.value = digits.slice(0, -1);
+        renderNumber();
+    }
+
+    function clearDialedNumber() {
+        const input = document.getElementById('dialedNumber');
+        input.value = '';
         renderNumber();
     }
 
@@ -209,30 +242,47 @@
         return sanitizeDigits(dialPrefixDefault) || '223';
     }
 
-    function normalizeDialNumber(value) {
+    function normalizeDialNumber(value, options = {}) {
+        const { enforceMax = true } = options;
         const digits = sanitizeDigits(value);
         if (!digits) {
             return '';
         }
 
-        const defaultPrefix = sanitizeDigits(dialPrefixDefault) || '223';
+        const enforcedPrefix = resolveDialPrefix();
         const gatewayPrefix = sanitizeDigits(dialPrefixGateway);
-        const gatewayCombo = gatewayPrefix ? `${gatewayPrefix}${defaultPrefix}` : '';
+        const gatewayCombo = gatewayPrefix && enforcedPrefix ? `${gatewayPrefix}${enforcedPrefix}` : '';
+
+        let normalized = digits;
 
         if (gatewayCombo && digits.startsWith(gatewayCombo)) {
+            normalized = digits;
+        } else if (enforcedPrefix && digits.startsWith(enforcedPrefix)) {
+            normalized = digits;
+        } else if (enforcedPrefix) {
+            normalized = `${enforcedPrefix}${digits}`;
+        }
+
+        if (enforceMax && normalized.length > MAX_DIGITS) {
+            normalized = normalized.slice(0, MAX_DIGITS);
+        }
+
+        return normalized;
+    }
+
+    function formatDisplayNumber(raw) {
+        const digits = sanitizeDigits(raw);
+        if (!digits) {
+            return '';
+        }
+
+        const head = 6;
+        const tail = 4;
+        if (digits.length <= head + tail) {
             return digits;
         }
 
-        const enforcedPrefix = resolveDialPrefix();
-        if (digits.startsWith(enforcedPrefix)) {
-            return digits;
-        }
-
-        if (gatewayCombo && enforcedPrefix === gatewayCombo && digits.startsWith(defaultPrefix)) {
-            return `${gatewayPrefix}${digits}`;
-        }
-
-        return `${enforcedPrefix}${digits.replace(/^0+/, '')}`;
+        return `${digits.slice(0, head)}...${digits.slice(-tail)}`;
     }
 
     function setDialingPreview(value) {
@@ -418,6 +468,30 @@
         }
     }
 
+    const backspaceBtn = document.getElementById('backspaceBtn');
+    if (backspaceBtn) {
+        const clearBackspaceHold = () => {
+            if (backspaceHoldTimer) {
+                clearTimeout(backspaceHoldTimer);
+                backspaceHoldTimer = null;
+            }
+        };
+
+        backspaceBtn.addEventListener('pointerdown', () => {
+            clearBackspaceHold();
+            backspaceLongPress = false;
+            backspaceHoldTimer = setTimeout(() => {
+                backspaceLongPress = true;
+                clearDialedNumber();
+            }, 600);
+        });
+
+        backspaceBtn.addEventListener('pointerup', clearBackspaceHold);
+        backspaceBtn.addEventListener('pointerleave', clearBackspaceHold);
+        backspaceBtn.addEventListener('pointercancel', clearBackspaceHold);
+    }
+
+    renderNumber();
     updateControlButtons();
 </script>
 @endsection
