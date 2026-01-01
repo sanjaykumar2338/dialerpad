@@ -28,3 +28,5 @@
         </div>
     </div>
 @endsection
+<div id="sip-status">NOT REGISTERED</div>
+<button id="call-btn" disabled>Call</button>
