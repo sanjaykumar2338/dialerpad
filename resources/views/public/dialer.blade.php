@@ -47,6 +47,41 @@
         max-height: 100vh;
         overflow: hidden;
     }
+
+    .sip-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: center;
+        font-size: 12px;
+        color: #cbd5e1;
+    }
+
+    .sip-status .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        display: inline-block;
+    }
+
+    .dot-green {
+        background: #22c55e;
+    }
+
+    .dot-red {
+        background: #ef4444;
+    }
+
+    .dot-yellow {
+        background: #f59e0b;
+    }
+
+    .call-btn-disabled,
+    #callBtn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
 </style>
 
 <div class="dialer-wrapper dialer min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 text-white">
@@ -56,6 +91,13 @@
             <div class="text-lg font-semibold">{{ $card->name }}</div>
             <div class="text-xs text-slate-400 mt-1">
                 Remaining: <span id="remainingMinutes">{{ $card->remaining_minutes }}</span> min
+            </div>
+        </div>
+
+        <div class="mb-3 flex justify-center">
+            <div id="sipStatus" class="sip-status" aria-live="polite">
+                <span id="sipDot" class="dot dot-yellow" aria-hidden="true"></span>
+                <span id="sipLabel">Connecting...</span>
             </div>
         </div>
 
@@ -134,6 +176,7 @@
     let micStream = null;
     let backspaceHoldTimer = null;
     let backspaceLongPress = false;
+    let sipRegState = 'connecting';
     const state = {
         muted: false,
         speaker: false,
@@ -142,6 +185,69 @@
     const dialPrefixDefault = @json(config('pbx.dial_prefix_default', '223'));
     const dialPrefixGateway = @json(config('pbx.dial_prefix_gateway', ''));
     const MAX_DIGITS = 15;
+
+    function normalizeSipState(state) {
+        const val = String(state || '').toLowerCase();
+        if (['registered', 'ready', 'ok'].includes(val)) return 'registered';
+        if (['connecting', 'registering', 'connected', 'connecting...'].includes(val)) return 'connecting';
+        if (['failed', 'registration_failed', 'error', 'terminated'].includes(val)) return 'failed';
+        return 'disconnected';
+    }
+
+    function updateSipUi(state) {
+        sipRegState = normalizeSipState(state);
+        const dot = document.getElementById('sipDot');
+        const label = document.getElementById('sipLabel');
+        const callBtn = document.getElementById('callBtn');
+
+        const map = {
+            connecting: { dot: 'dot-yellow', label: 'Connecting...' },
+            registered: { dot: 'dot-green', label: 'Registered' },
+            failed: { dot: 'dot-red', label: 'Registration Failed' },
+            disconnected: { dot: 'dot-red', label: 'Not Registered' },
+        };
+
+        const meta = map[sipRegState] || map.disconnected;
+
+        if (dot) {
+            dot.classList.remove('dot-green', 'dot-red', 'dot-yellow');
+            dot.classList.add(meta.dot);
+        }
+
+        if (label) {
+            label.textContent = meta.label;
+        }
+
+        if (callBtn) {
+            const shouldDisable = !inCall && sipRegState !== 'registered';
+            callBtn.disabled = shouldDisable;
+            callBtn.classList.toggle('call-btn-disabled', shouldDisable);
+        }
+    }
+
+    function bindSipRegistrationEvents() {
+        // Listen for existing SIP events and mirror them onto the UI.
+        const mapState = (eventName, state) => {
+            window.addEventListener(eventName, () => updateSipUi(state));
+        };
+
+        ['sip:connecting', 'sip:connected', 'sip:registering'].forEach((eventName) => mapState(eventName, 'connecting'));
+        mapState('sip:registered', 'registered');
+        mapState('sip:registrationFailed', 'failed');
+        mapState('sip:failed', 'failed');
+        mapState('sip:disconnected', 'disconnected');
+        mapState('sip:unregistered', 'disconnected');
+        mapState('sip:terminated', 'disconnected');
+
+        window.addEventListener('sip:state', (event) => {
+            const detailState = event && event.detail ? event.detail.state : null;
+            if (detailState) {
+                updateSipUi(detailState);
+            }
+        });
+
+        window.setSipRegistrationState = updateSipUi;
+    }
 
     function getFontSizeByLength(len) {
         if (len <= 6) return 44;
@@ -375,6 +481,16 @@
     }
 
     async function toggleCall() {
+        if (!inCall && sipRegState !== 'registered') {
+            const statusEl = document.getElementById('statusMessage');
+            if (statusEl) {
+                statusEl.textContent = sipRegState === 'connecting'
+                    ? 'Registering... please wait.'
+                    : 'SIP not registered. Please wait for connection.';
+            }
+            return;
+        }
+
         if (!inCall) {
             await startCallRequest();
         } else {
@@ -480,6 +596,7 @@
             callBtn.classList.remove('bg-red-500','hover:bg-red-400');
             callBtn.classList.add('bg-emerald-500','hover:bg-emerald-400');
             updateControlButtons();
+            updateSipUi(sipRegState);
             setDialingPreview('');
             stopMicrophoneAccess();
 
@@ -523,5 +640,7 @@
 
     renderNumber();
     updateControlButtons();
+    bindSipRegistrationEvents();
+    updateSipUi(sipRegState);
 </script>
 @endsection
