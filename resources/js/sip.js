@@ -1,9 +1,4 @@
-import {
-  UserAgent,
-  Registerer,
-  Inviter
-} from "sip.js";
-
+const { UserAgent, Registerer, Inviter } = window.SIP;
 /* =========================
    GLOBAL STATE (SINGLETON)
 ========================= */
