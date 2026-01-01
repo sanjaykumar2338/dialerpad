@@ -1,6 +1,14 @@
+import { getSIP } from './sip-global';
+
 let currentSession = null;
 
 window.makeCall = async function (number) {
+  const SIP = getSIP();
+  if (!SIP) {
+    console.error("SIP.js not loaded. Cannot make call.");
+    return;
+  }
+
   if (!window.userAgent) {
     alert("SIP not ready");
     return;
@@ -24,6 +32,12 @@ window.makeCall = async function (number) {
 };
 
 window.hangupCall = async function () {
+  const SIP = getSIP();
+  if (!SIP) {
+    console.error("SIP.js not loaded. Cannot hang up.");
+    return;
+  }
+
   if (currentSession) {
     await currentSession.bye();
     currentSession = null;

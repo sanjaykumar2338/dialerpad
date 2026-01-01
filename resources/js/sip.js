@@ -1,4 +1,15 @@
-const { UserAgent, Registerer, Inviter } = window.SIP;
+import { getSIP } from './sip-global';
+
+const SIP = getSIP();
+let UserAgent;
+let Registerer;
+let Inviter;
+
+if (SIP) {
+  ({ UserAgent, Registerer, Inviter } = SIP);
+} else {
+  console.error("SIP.js missing. Check script include order.");
+}
 /* =========================
    GLOBAL STATE (SINGLETON)
 ========================= */
@@ -42,6 +53,11 @@ export async function initSip({
   domain,
   wss
 }) {
+  if (!UserAgent || !Registerer) {
+    console.error("SIP.js not available. Cannot initialize SIP.");
+    return;
+  }
+
   if (userAgent) {
     console.warn("SIP already initialized — skipping");
     return;
@@ -88,6 +104,11 @@ export async function initSip({
 ========================= */
 
 export function placeCall(number) {
+  if (!Inviter || !UserAgent) {
+    console.error("SIP.js not available. Cannot place call.");
+    return;
+  }
+
   if (!isRegistered) {
     console.warn("CALL BLOCKED — NOT REGISTERED");
     return;

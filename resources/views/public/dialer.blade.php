@@ -84,6 +84,8 @@
     }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/sip.js@0.21.2/dist/sip.min.js"></script>
+
 <div class="dialer-wrapper dialer min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 text-white">
     <div class="w-full max-w-sm bg-slate-900/80 rounded-3xl p-6 shadow-xl border border-slate-700">
         <div class="mb-4 text-center">
