@@ -1,15 +1,10 @@
-import { getSIP } from './sip-global';
+/* =========================================================
+   SIP.JS WEBRTC CLIENT (PRODUCTION SAFE)
+   Loaded via <script> → window.SIP
+========================================================= */
 
-const SIP = getSIP();
-let UserAgent;
-let Registerer;
-let Inviter;
+const { UserAgent, Registerer, Inviter } = window.SIP;
 
-if (SIP) {
-  ({ UserAgent, Registerer, Inviter } = SIP);
-} else {
-  console.error("SIP.js missing. Check script include order.");
-}
 /* =========================
    GLOBAL STATE (SINGLETON)
 ========================= */
@@ -17,7 +12,6 @@ if (SIP) {
 let userAgent = null;
 let registerer = null;
 let currentSession = null;
-
 let isRegistered = false;
 
 /* =========================
@@ -43,32 +37,28 @@ function updateUiRegistration(registered) {
 
 /* =========================
    SIP INITIALIZATION
-   (CALLED ONLY AFTER
-   BACKEND SENDS CREDENTIALS)
+   (CALL ONLY AFTER BACKEND
+   RETURNS CREDENTIALS)
 ========================= */
 
-export async function initSip({
-  extension,
-  password,
-  domain,
-  wss
-}) {
-  if (!UserAgent || !Registerer) {
-    console.error("SIP.js not available. Cannot initialize SIP.");
-    return;
-  }
-
+export async function initSip({ extension, password, domain }) {
   if (userAgent) {
     console.warn("SIP already initialized — skipping");
     return;
   }
 
+  const sipUri = `sip:${extension}@${domain}`;
+  const wssUrl = "wss://afritell.com:8089/ws";
+
+  console.log("SIP REGISTER URI:", sipUri);
+  console.log("SIP WSS URL:", wssUrl);
+
   const sipConfig = {
-    uri: UserAgent.makeURI(`sip:${extension}@${domain}`),
+    uri: UserAgent.makeURI(sipUri),
     authorizationUsername: extension,
     authorizationPassword: password,
     transportOptions: {
-      server: wss
+      server: wssUrl
     }
   };
 
@@ -91,7 +81,7 @@ export async function initSip({
 
   userAgent.delegate = {
     onInvite(invitation) {
-      console.log("Incoming call", invitation);
+      console.log("Incoming call received", invitation);
     }
   };
 
@@ -100,17 +90,12 @@ export async function initSip({
 }
 
 /* =========================
-   PLACE CALL (GATED)
+   PLACE CALL (STRICTLY GATED)
 ========================= */
 
 export function placeCall(number) {
-  if (!Inviter || !UserAgent) {
-    console.error("SIP.js not available. Cannot place call.");
-    return;
-  }
-
-  if (!isRegistered) {
-    console.warn("CALL BLOCKED — NOT REGISTERED");
+  if (!isRegistered || !userAgent) {
+    console.warn("CALL BLOCKED — SIP NOT REGISTERED");
     return;
   }
 
@@ -119,11 +104,11 @@ export function placeCall(number) {
   }
 
   const normalized = normalizeNumber(number);
-  const target = UserAgent.makeURI(
-    `sip:${normalized}@afritell.com`
-  );
+  const targetUri = UserAgent.makeURI(`sip:${normalized}@afritell.com`);
 
-  currentSession = new Inviter(userAgent, target);
+  console.log("PLACING CALL TO:", targetUri.toString());
+
+  currentSession = new Inviter(userAgent, targetUri);
 
   currentSession.stateChange.addListener((state) => {
     console.log("CALL STATE:", state);
