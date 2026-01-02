@@ -1,14 +1,26 @@
 /* =========================================================
-   SIP.JS WEBRTC CLIENT (PRODUCTION SAFE)
+   SIP.JS WEBRTC CLIENT – FINAL LOCKED VERSION
    Loaded via <script> → window.SIP
 ========================================================= */
 
+if (!window.SIP) {
+  console.error("SIP.js not loaded on window");
+}
+
+/* =========================
+   SIP CLASSES
+========================= */
 const { UserAgent, Registerer, Inviter } = window.SIP;
+
+/* =========================
+   CONSTANTS (LOCKED)
+========================= */
+const SIP_DOMAIN = "afritell.com";
+const WSS_URL = "wss://afritell.com:8089/ws";
 
 /* =========================
    GLOBAL STATE (SINGLETON)
 ========================= */
-
 let userAgent = null;
 let registerer = null;
 let currentSession = null;
@@ -17,7 +29,6 @@ let isRegistered = false;
 /* =========================
    UI HELPERS
 ========================= */
-
 function updateUiRegistration(registered) {
   const status = document.getElementById("sip-status");
   const callBtn = document.getElementById("call-btn");
@@ -38,27 +49,36 @@ function updateUiRegistration(registered) {
 /* =========================
    SIP INITIALIZATION
    (CALL ONLY AFTER BACKEND
-   RETURNS CREDENTIALS)
+   RETURNS EXTENSION + PASSWORD)
 ========================= */
-
-export async function initSip({ extension, password, domain }) {
+export async function initSip({ extension, password }) {
   if (userAgent) {
     console.warn("SIP already initialized — skipping");
     return;
   }
 
-  const sipUri = `sip:${extension}@${domain}`;
-  const wssUrl = "wss://afritell.com:8089/ws";
+  // 🔒 LOCKED SIP IDENTITY
+  const sipUri = `sip:${extension}@${SIP_DOMAIN}`;
 
-  console.log("SIP REGISTER URI:", sipUri);
-  console.log("SIP WSS URL:", wssUrl);
+  // 🔎 MANDATORY DEBUG LOG (PBX CONFIRMATION)
+  console.log("SIP CONFIG CHECK", {
+    uri: sipUri,
+    authorizationUsername: extension,
+    transportServer: WSS_URL
+  });
 
   const sipConfig = {
     uri: UserAgent.makeURI(sipUri),
-    authorizationUsername: extension,
+    authorizationUsername: String(extension),
     authorizationPassword: password,
     transportOptions: {
-      server: wssUrl
+      server: WSS_URL
+    },
+    sessionDescriptionHandlerFactoryOptions: {
+      constraints: {
+        audio: true,
+        video: false
+      }
     }
   };
 
@@ -81,7 +101,7 @@ export async function initSip({ extension, password, domain }) {
 
   userAgent.delegate = {
     onInvite(invitation) {
-      console.log("Incoming call received", invitation);
+      console.log("Incoming call", invitation);
     }
   };
 
@@ -92,7 +112,6 @@ export async function initSip({ extension, password, domain }) {
 /* =========================
    PLACE CALL (STRICTLY GATED)
 ========================= */
-
 export function placeCall(number) {
   if (!isRegistered || !userAgent) {
     console.warn("CALL BLOCKED — SIP NOT REGISTERED");
@@ -104,7 +123,7 @@ export function placeCall(number) {
   }
 
   const normalized = normalizeNumber(number);
-  const targetUri = UserAgent.makeURI(`sip:${normalized}@afritell.com`);
+  const targetUri = UserAgent.makeURI(`sip:${normalized}@${SIP_DOMAIN}`);
 
   console.log("PLACING CALL TO:", targetUri.toString());
 
@@ -112,7 +131,6 @@ export function placeCall(number) {
 
   currentSession.stateChange.addListener((state) => {
     console.log("CALL STATE:", state);
-
     if (state === "Terminated") {
       cleanupSession();
     }
@@ -127,7 +145,6 @@ export function placeCall(number) {
 /* =========================
    CLEANUP (NO EXCEPTIONS)
 ========================= */
-
 function cleanupSession() {
   try { currentSession?.bye(); } catch (e) {}
   try { currentSession?.dispose(); } catch (e) {}
@@ -139,7 +156,6 @@ window.addEventListener("beforeunload", cleanupSession);
 /* =========================
    UTILITIES
 ========================= */
-
 function normalizeNumber(num) {
   return num.replace(/\D/g, "");
 }
