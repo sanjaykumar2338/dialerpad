@@ -24,11 +24,20 @@
         height: 64px;
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         padding: 0 14px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .number-wrap::-webkit-scrollbar {
+        display: none;
     }
 
     .dial-number {
+        min-width: 100%;
         font-weight: 700;
         letter-spacing: 1px;
         line-height: 1;
@@ -186,7 +195,6 @@
     const cardPrefix = @json($card->prefix);
     const dialPrefixDefault = @json(config('pbx.dial_prefix_default', '223'));
     const dialPrefixGateway = @json(config('pbx.dial_prefix_gateway', ''));
-    const MAX_DIGITS = 15;
 
     function normalizeSipState(state) {
         const val = String(state || '').toLowerCase();
@@ -278,6 +286,8 @@
                 el.style.fontSize = `${size}px`;
                 guard++;
             }
+
+            wrap.scrollLeft = digits.length ? wrap.scrollWidth : 0;
         }
     }
 
@@ -299,12 +309,7 @@
         if (inCall) return;
         if (!/^\d$/.test(digit)) return;
         const input  = document.getElementById('dialedNumber');
-        const nextValue = sanitizeDigits(`${input.value}${digit}`);
-        const normalized = normalizeDialNumber(nextValue, { enforceMax: false });
-        if (normalized.length > MAX_DIGITS) {
-            return;
-        }
-        input.value = nextValue;
+        input.value = sanitizeDigits(`${input.value}${digit}`);
         renderNumber();
     }
 
@@ -395,8 +400,7 @@
         return sanitizeDigits(dialPrefixDefault) || '223';
     }
 
-    function normalizeDialNumber(value, options = {}) {
-        const { enforceMax = true } = options;
+    function normalizeDialNumber(value) {
         const digits = sanitizeDigits(value);
         if (!digits) {
             return '';
@@ -414,10 +418,6 @@
             normalized = digits;
         } else if (enforcedPrefix) {
             normalized = `${enforcedPrefix}${digits}`;
-        }
-
-        if (enforceMax && normalized.length > MAX_DIGITS) {
-            normalized = normalized.slice(0, MAX_DIGITS);
         }
 
         return normalized;

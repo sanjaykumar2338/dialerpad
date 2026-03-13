@@ -24,7 +24,7 @@ class DialerController extends Controller
     public function startCall(Request $request, string $uuid)
     {
         $request->validate([
-            'dialed_number' => ['required','string','max:30'],
+            'dialed_number' => ['required','string','max:191'],
         ]);
 
         $card = CallCard::where('uuid', $uuid)->firstOrFail();
