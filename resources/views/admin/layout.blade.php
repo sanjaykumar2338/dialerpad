@@ -218,6 +218,7 @@
             <div>
                 <nav class="nav-links">
                     <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard</a>
+                    <a href="{{ route('admin.distributors.index') }}" class="{{ request()->routeIs('admin.distributors.*') ? 'active' : '' }}">Distributors</a>
                     <a href="{{ route('admin.batch-requests.index') }}" class="{{ request()->routeIs('admin.batch-requests.*') || request()->routeIs('admin.distribution-batches.*') ? 'active' : '' }}">Distribution Requests</a>
                     <a href="{{ route('admin.call-cards.index') }}" class="{{ request()->routeIs('admin.call-cards.*') ? 'active' : '' }}">Call Cards</a>
                     <a href="{{ route('admin.call-sessions.index') }}" class="{{ request()->routeIs('admin.call-sessions.*') ? 'active' : '' }}">Call Sessions</a>

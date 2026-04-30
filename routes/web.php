@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\BatchRequestController as AdminBatchRequestContro
 use App\Http\Controllers\Admin\CallCardController;
 use App\Http\Controllers\Admin\CallCardExportController;
 use App\Http\Controllers\Admin\CallSessionExportController;
+use App\Http\Controllers\Admin\DistributorController;
 use App\Http\Controllers\Admin\DistributionBatchExportController;
 use App\Http\Controllers\Admin\EsimCodeController;
 use App\Http\Controllers\DialerController;
@@ -32,6 +33,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('batch-requests/{batchRequest}/document', [AdminBatchRequestController::class, 'uploadDocument'])->name('batch-requests.document');
     Route::post('batch-requests/{batchRequest}/complete', [AdminBatchRequestController::class, 'complete'])->name('batch-requests.complete');
     Route::get('distribution-batches/{batch}/download', [DistributionBatchExportController::class, 'download'])->name('distribution-batches.download');
+    Route::patch('distributors/{distributor}/status', [DistributorController::class, 'updateStatus'])->name('distributors.status');
+    Route::resource('distributors', DistributorController::class)->except(['show']);
     Route::resource('call-cards', CallCardController::class);
     Route::get('call-cards/batch/{batch}/start-download', [CallCardController::class, 'startBatchDownload'])->name('call-cards.batch-start');
     Route::get('call-cards/batch/{batch}/zip', [CallCardExportController::class, 'exportBatchZip'])->name('call-cards.batch-zip');
@@ -47,7 +50,7 @@ Route::get('/esim/activate', fn () => redirect('/'))->name('esim.activate.redire
 Route::get('/esim/{uuid}', [EsimController::class, 'showForm'])->name('esim.form');
 Route::post('/esim/{uuid}', [EsimController::class, 'submit'])->name('esim.submit');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'distributor'])->group(function () {
     Route::get('/dashboard', [AccountDashboardController::class, 'index'])->name('dashboard');
     Route::get('/request-cards', [AccountBatchRequestController::class, 'create'])->name('account.requests.create');
     Route::post('/request-cards', [AccountBatchRequestController::class, 'store'])->name('account.requests.store');

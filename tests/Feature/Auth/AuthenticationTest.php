@@ -43,6 +43,24 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('admin.dashboard', absolute: false));
     }
 
+    public function test_authenticated_admins_are_redirected_from_login_to_admin_dashboard(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get('/login')
+            ->assertRedirect(route('admin.dashboard'));
+    }
+
+    public function test_admins_are_redirected_from_distributor_dashboard_to_admin_dashboard(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get('/dashboard')
+            ->assertRedirect(route('admin.dashboard'));
+    }
+
     public function test_admin_login_ignores_distributor_dashboard_intended_url(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

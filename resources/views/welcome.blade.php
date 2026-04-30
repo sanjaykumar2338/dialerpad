@@ -147,6 +147,7 @@
             </div>
             <div class="cta">
                 <a class="btn primary" href="{{ route('login') }}">Admin Login</a>
+                <a class="btn ghost" href="{{ route('distributor.login') }}">Distributor Login</a>
                 <a class="btn ghost" href="{{ route('esim.activate.redirect') }}">Request eSIM</a>
             </div>
         </div>

@@ -19,6 +19,11 @@ class AuthenticatedSessionController extends Controller
         return view('auth.login');
     }
 
+    public function createDistributor(): View
+    {
+        return view('auth.distributor-login');
+    }
+
     /**
      * Handle an incoming authentication request.
      */

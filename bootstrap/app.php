@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsureDistributor;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,8 +14,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->redirectUsersTo(function ($request): string {
+            return $request->user()?->is_admin
+                ? route('admin.dashboard')
+                : route('dashboard');
+        });
+
         $middleware->alias([
             'admin' => EnsureAdmin::class,
+            'distributor' => EnsureDistributor::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

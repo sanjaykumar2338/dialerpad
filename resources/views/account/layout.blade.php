@@ -15,6 +15,7 @@
 @php
     $currentUser = auth()->user();
     $profilePhotoUrl = $currentUser?->profile_photo_path ? asset('storage/'.$currentUser->profile_photo_path) : null;
+    $profileRole = $currentUser?->role === \App\Models\User::ROLE_MASTER_DISTRIBUTOR ? 'Master Distributor' : 'Distributor';
     $navIconClass = 'h-5 w-5';
     $links = [
         ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => request()->routeIs('dashboard'), 'icon' => 'dashboard'],
@@ -108,7 +109,7 @@
                         </span>
                         <span class="min-w-0 text-left">
                             <span class="profile-name">{{ $currentUser?->name ?? 'AFRITEL Distributor' }}</span>
-                            <span class="profile-role">Master Distributor</span>
+                            <span class="profile-role">{{ $profileRole }}</span>
                         </span>
                         <svg class="h-4 w-4 shrink-0 text-cyan-200/80" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
