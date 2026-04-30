@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\CallCard;
 use App\Models\CallSession;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class DialerController extends Controller
     public function startCall(Request $request, string $uuid)
     {
         $request->validate([
-            'dialed_number' => ['required','string','max:191'],
+            'dialed_number' => ['required', 'string', 'max:191'],
         ]);
 
         $card = CallCard::where('uuid', $uuid)->firstOrFail();
@@ -45,17 +46,17 @@ class DialerController extends Controller
         }
 
         $session = CallSession::create([
-            'call_card_id'   => $card->id,
-            'session_uuid'   => Str::uuid(),
-            'dialed_number'  => $normalizedNumber,
-            'full_number'    => $normalizedNumber,
-            'started_at'     => now(),
-            'status'         => 'started',
+            'call_card_id' => $card->id,
+            'session_uuid' => Str::uuid(),
+            'dialed_number' => $normalizedNumber,
+            'full_number' => $normalizedNumber,
+            'started_at' => now(),
+            'status' => 'started',
         ]);
 
         return response()->json([
-            'success'       => true,
-            'session_uuid'  => $session->session_uuid,
+            'success' => true,
+            'session_uuid' => $session->session_uuid,
             'remaining_min' => $card->remaining_minutes,
         ]);
     }
@@ -63,8 +64,8 @@ class DialerController extends Controller
     public function endCall(Request $request, string $uuid)
     {
         $request->validate([
-            'session_uuid'     => ['required','uuid'],
-            'duration_seconds' => ['required','integer','min:0'],
+            'session_uuid' => ['required', 'uuid'],
+            'duration_seconds' => ['required', 'integer', 'min:0'],
         ]);
 
         $card = CallCard::where('uuid', $uuid)->firstOrFail();
@@ -78,28 +79,46 @@ class DialerController extends Controller
 
             if ($session->status === 'completed') {
                 return response()->json([
-                    'success'       => true,
+                    'success' => true,
                     'remaining_min' => $card->remaining_minutes,
-                    'card_status'   => $card->status,
+                    'card_status' => $card->status,
                 ]);
             }
 
-            $session->ended_at         = now();
+            $wasUnused = $card->used_minutes <= 0;
+
+            $session->ended_at = now();
             $session->duration_seconds = $request->duration_seconds;
-            $session->status           = 'completed';
+            $session->status = 'completed';
 
             $usedMinutes = (int) ceil($session->duration_seconds / 60);
             $card->used_minutes = min($card->total_minutes, $card->used_minutes + $usedMinutes);
+            if ($wasUnused && $usedMinutes > 0 && ! $card->activated_at) {
+                $card->activated_at = now();
+            }
             $card->markExpiredIfNeeded();
             $card->refresh();
 
             $session->remaining_minutes_after_call = $card->remaining_minutes;
             $session->save();
 
+            if ($wasUnused && $usedMinutes > 0 && $card->account_id) {
+                ActivityLog::create([
+                    'account_id' => $card->account_id,
+                    'batch_id' => $card->batch_id,
+                    'event' => 'cards_activated',
+                    'description' => 'Call card '.$card->name.' was activated.',
+                    'metadata' => [
+                        'card_id' => $card->id,
+                        'uuid' => $card->uuid,
+                    ],
+                ]);
+            }
+
             return response()->json([
-                'success'       => true,
+                'success' => true,
                 'remaining_min' => $card->remaining_minutes,
-                'card_status'   => $card->status,
+                'card_status' => $card->status,
             ]);
         });
     }
@@ -113,7 +132,7 @@ class DialerController extends Controller
 
         $defaultPrefix = $this->dialPrefixDefault();
         $gatewayPrefix = $this->dialPrefixGateway();
-        $gatewayCombo = $gatewayPrefix !== '' ? $gatewayPrefix . $defaultPrefix : '';
+        $gatewayCombo = $gatewayPrefix !== '' ? $gatewayPrefix.$defaultPrefix : '';
 
         if ($gatewayCombo !== '' && str_starts_with($digits, $gatewayCombo)) {
             return $digits;
@@ -125,10 +144,10 @@ class DialerController extends Controller
         }
 
         if ($gatewayCombo !== '' && $enforcedPrefix === $gatewayCombo && str_starts_with($digits, $defaultPrefix)) {
-            return $gatewayPrefix . $digits;
+            return $gatewayPrefix.$digits;
         }
 
-        return $enforcedPrefix . ltrim($digits, '0');
+        return $enforcedPrefix.ltrim($digits, '0');
     }
 
     private function resolveDialPrefix(?string $prefix): string

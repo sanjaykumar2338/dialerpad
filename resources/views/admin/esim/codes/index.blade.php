@@ -51,7 +51,7 @@
                             </td>
                             <td>
                                 @php
-                                    $qrPath = 'storage/esim-qrcodes/' . $code->uuid . '.png';
+                                    $qrPath = 'storage/esim-qrcodes/' . $code->uuid . '.svg';
                                 @endphp
                                 <img src="{{ asset($qrPath) }}" alt="QR {{ $code->uuid }}" style="width:70px; height:70px;" class="rounded border border-light">
                             </td>

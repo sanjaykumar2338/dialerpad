@@ -1,12 +1,18 @@
 <?php
 
+use App\Http\Controllers\Account\BatchController as AccountBatchController;
+use App\Http\Controllers\Account\BatchRequestController as AccountBatchRequestController;
+use App\Http\Controllers\Account\DashboardController as AccountDashboardController;
+use App\Http\Controllers\Account\ReportController as AccountReportController;
+use App\Http\Controllers\Admin\BatchRequestController as AdminBatchRequestController;
+use App\Http\Controllers\Admin\CallCardController;
+use App\Http\Controllers\Admin\CallCardExportController;
+use App\Http\Controllers\Admin\CallSessionExportController;
+use App\Http\Controllers\Admin\DistributionBatchExportController;
+use App\Http\Controllers\Admin\EsimCodeController;
 use App\Http\Controllers\DialerController;
 use App\Http\Controllers\EsimController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Admin\CallCardController;
-use App\Http\Controllers\Admin\CallSessionExportController;
-use App\Http\Controllers\Admin\CallCardExportController;
-use App\Http\Controllers\Admin\EsimCodeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'));
@@ -19,6 +25,13 @@ Route::prefix('c')->group(function () {
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('batch-requests', [AdminBatchRequestController::class, 'index'])->name('batch-requests.index');
+    Route::post('batch-requests/{batchRequest}/approve', [AdminBatchRequestController::class, 'approve'])->name('batch-requests.approve');
+    Route::post('batch-requests/{batchRequest}/generate', [AdminBatchRequestController::class, 'generate'])->name('batch-requests.generate');
+    Route::post('batch-requests/{batchRequest}/sent', [AdminBatchRequestController::class, 'markSent'])->name('batch-requests.sent');
+    Route::post('batch-requests/{batchRequest}/document', [AdminBatchRequestController::class, 'uploadDocument'])->name('batch-requests.document');
+    Route::post('batch-requests/{batchRequest}/complete', [AdminBatchRequestController::class, 'complete'])->name('batch-requests.complete');
+    Route::get('distribution-batches/{batch}/download', [DistributionBatchExportController::class, 'download'])->name('distribution-batches.download');
     Route::resource('call-cards', CallCardController::class);
     Route::get('call-cards/batch/{batch}/start-download', [CallCardController::class, 'startBatchDownload'])->name('call-cards.batch-start');
     Route::get('call-cards/batch/{batch}/zip', [CallCardExportController::class, 'exportBatchZip'])->name('call-cards.batch-zip');
@@ -34,8 +47,16 @@ Route::get('/esim/activate', fn () => redirect('/'))->name('esim.activate.redire
 Route::get('/esim/{uuid}', [EsimController::class, 'showForm'])->name('esim.form');
 Route::post('/esim/{uuid}', [EsimController::class, 'submit'])->name('esim.submit');
 
-/* Breeze dashboard/profile if needed */
-Route::get('/dashboard', fn () => view('dashboard'))->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/dashboard', [AccountDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/request-cards', [AccountBatchRequestController::class, 'create'])->name('account.requests.create');
+    Route::post('/request-cards', [AccountBatchRequestController::class, 'store'])->name('account.requests.store');
+    Route::get('/batches', [AccountBatchController::class, 'index'])->name('account.batches.short');
+    Route::get('/my-batches', [AccountBatchController::class, 'index'])->name('account.batches.index');
+    Route::get('/reports', [AccountReportController::class, 'index'])->name('account.reports.index');
+    Route::get('/settings', [ProfileController::class, 'edit'])->name('account.settings.edit');
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

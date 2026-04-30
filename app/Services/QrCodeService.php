@@ -13,14 +13,14 @@ class QrCodeService
     public function generateForCallCard(CallCard $card): string
     {
         $url = url('/c/' . $card->uuid);
-        $relativePath = 'qrcodes/' . $card->uuid . '.png';
+        $relativePath = 'qrcodes/' . $card->uuid . '.svg';
 
         Storage::disk('public')->makeDirectory('qrcodes');
 
         $options = new QROptions([
-            'outputType' => QRCode::OUTPUT_IMAGE_PNG,
+            'outputType' => QRCode::OUTPUT_MARKUP_SVG,
             'scale' => 8,
-            'imageBase64' => false,
+            'outputBase64' => false,
             'margin' => 1,
         ]);
 
@@ -33,14 +33,14 @@ class QrCodeService
 
     public function generateForEsimCode(EsimCode $code, string $url): string
     {
-        $relativePath = 'esim-qrcodes/' . $code->uuid . '.png';
+        $relativePath = 'esim-qrcodes/' . $code->uuid . '.svg';
 
         Storage::disk('public')->makeDirectory('esim-qrcodes');
 
         $options = new QROptions([
-            'outputType' => QRCode::OUTPUT_IMAGE_PNG,
+            'outputType' => QRCode::OUTPUT_MARKUP_SVG,
             'scale' => 8,
-            'imageBase64' => false,
+            'outputBase64' => false,
             'margin' => 1,
         ]);
 

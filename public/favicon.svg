@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AFRITEL">
+    <defs>
+        <linearGradient id="afritel-bg" x1="9" y1="8" x2="55" y2="56" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#071024"/>
+            <stop offset="1" stop-color="#160e2f"/>
+        </linearGradient>
+        <linearGradient id="afritel-mark" x1="11" y1="18" x2="50" y2="48" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#38e7ff"/>
+            <stop offset="0.58" stop-color="#8b5cf6"/>
+            <stop offset="1" stop-color="#ff44d2"/>
+        </linearGradient>
+        <filter id="afritel-glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="2.4" result="blur"/>
+            <feMerge>
+                <feMergeNode in="blur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+    </defs>
+    <rect width="64" height="64" rx="14" fill="url(#afritel-bg)"/>
+    <path d="M14 46L27.2 18h6.1L47 46h-7.2l-2.6-6.1H23.3L20.8 46H14Zm12-12.3h8.4L30.1 23.4 26 33.7Z" fill="url(#afritel-mark)" filter="url(#afritel-glow)"/>
+    <path d="M42 18h3.7c7.1 0 12.8 5.8 12.8 12.8v3.7" fill="none" stroke="#38e7ff" stroke-width="3.2" stroke-linecap="round" filter="url(#afritel-glow)"/>
+    <path d="M42 25.5h3.2c2.9 0 5.3 2.4 5.3 5.3V34" fill="none" stroke="#7df9ff" stroke-width="3.2" stroke-linecap="round"/>
+</svg>

@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Foundation\Auth\User;
 
 class CallCard extends Model
 {
@@ -21,7 +20,9 @@ class CallCard extends Model
         'status',
         'notes',
         'created_by',
+        'account_id',
         'batch_id',
+        'activated_at',
     ];
 
     protected $appends = [
@@ -32,6 +33,7 @@ class CallCard extends Model
     protected $casts = [
         'used_minutes' => 'integer',
         'total_minutes' => 'integer',
+        'activated_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -56,6 +58,11 @@ class CallCard extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'account_id');
+    }
+
     public function getRemainingMinutesAttribute(): int
     {
         return max(0, $this->total_minutes - $this->used_minutes);
@@ -69,6 +76,6 @@ class CallCard extends Model
 
     public function getQrCodePathAttribute(): string
     {
-        return 'storage/qrcodes/' . $this->uuid . '.png';
+        return 'storage/qrcodes/'.$this->uuid.'.svg';
     }
 }

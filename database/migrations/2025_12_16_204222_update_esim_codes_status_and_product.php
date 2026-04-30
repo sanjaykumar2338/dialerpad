@@ -15,11 +15,19 @@ return new class extends Migration
             $table->timestamp('used_at')->nullable()->after('status');
         });
 
+        $productIds = DB::table('esim_types')->pluck('product_id', 'id');
+
         DB::table('esim_codes')
-            ->join('esim_types', 'esim_codes.esim_type_id', '=', 'esim_types.id')
-            ->update([
-                'esim_codes.product_id' => DB::raw('esim_types.product_id'),
-            ]);
+            ->select(['id', 'esim_type_id'])
+            ->orderBy('id')
+            ->cursor()
+            ->each(function ($code) use ($productIds): void {
+                DB::table('esim_codes')
+                    ->where('id', $code->id)
+                    ->update([
+                        'product_id' => $productIds[$code->esim_type_id] ?? null,
+                    ]);
+            });
 
         DB::table('esim_codes')->where('status', 'active')->update(['status' => 'unused']);
     }

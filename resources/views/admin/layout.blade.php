@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DialerPad Admin</title>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.svg') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <style>
         :root {
@@ -132,6 +134,32 @@
         .table tbody tr {
             border-color: rgba(148, 163, 184, 0.1);
         }
+        .card {
+            --bs-card-bg: rgba(15, 23, 42, 0.45);
+            --bs-card-color: #e2e8f0;
+            color: #e2e8f0;
+        }
+        .card.bg-transparent {
+            background:
+                linear-gradient(145deg, rgba(15, 23, 42, 0.62), rgba(2, 6, 23, 0.58)) !important;
+        }
+        .card .card-title,
+        .card h1,
+        .card h2,
+        .card h3,
+        .card h4,
+        .card h5,
+        .card h6,
+        .card .fw-semibold {
+            color: #f8fafc;
+        }
+        .text-muted,
+        .card .text-muted {
+            color: #94a3b8 !important;
+        }
+        .card code {
+            color: #e0f2fe;
+        }
         label,
         .form-label {
             color: #f8fafc;
@@ -190,6 +218,7 @@
             <div>
                 <nav class="nav-links">
                     <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard</a>
+                    <a href="{{ route('admin.batch-requests.index') }}" class="{{ request()->routeIs('admin.batch-requests.*') || request()->routeIs('admin.distribution-batches.*') ? 'active' : '' }}">Distribution Requests</a>
                     <a href="{{ route('admin.call-cards.index') }}" class="{{ request()->routeIs('admin.call-cards.*') ? 'active' : '' }}">Call Cards</a>
                     <a href="{{ route('admin.call-sessions.index') }}" class="{{ request()->routeIs('admin.call-sessions.*') ? 'active' : '' }}">Call Sessions</a>
                     <a href="{{ route('admin.esim-types.index') }}" class="{{ request()->routeIs('admin.esim-types.*') || request()->routeIs('admin.esim-requests.*') || request()->routeIs('admin.esim-codes.*') ? 'active' : '' }}">eSIM Types</a>

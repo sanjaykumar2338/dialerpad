@@ -60,11 +60,11 @@ class CallCardExportController extends Controller
 
         foreach ($cards as $card) {
             $this->qrCodeService->generateForCallCard($card);
-            $relative = 'qrcodes/' . $card->uuid . '.png';
+            $relative = 'qrcodes/' . $card->uuid . '.svg';
             $absolute = storage_path('app/public/' . $relative);
 
             if (file_exists($absolute)) {
-                $zipName = Str::slug($card->name) . '-' . $card->uuid . '.png';
+                $zipName = Str::slug($card->name) . '-' . $card->uuid . '.svg';
                 $zip->addFile($absolute, $zipName);
             }
         }
@@ -108,11 +108,11 @@ class CallCardExportController extends Controller
         $i = 1;
         foreach ($cards as $card) {
             $this->qrCodeService->generateForCallCard($card);
-            $relative = 'qrcodes/' . $card->uuid . '.png';
+            $relative = 'qrcodes/' . $card->uuid . '.svg';
             $absolute = storage_path('app/public/' . $relative);
 
             if (file_exists($absolute)) {
-                $zip->addFile($absolute, 'qr' . $i . '.png');
+                $zip->addFile($absolute, 'qr' . $i . '.svg');
             }
 
             $i++;

@@ -15,6 +15,8 @@ class EsimCode extends Model
         'uuid',
         'esim_type_id',
         'product_id',
+        'account_id',
+        'batch_id',
         'label',
         'status',
         'used_at',
@@ -27,6 +29,11 @@ class EsimCode extends Model
     public function type(): BelongsTo
     {
         return $this->belongsTo(EsimType::class, 'esim_type_id');
+    }
+
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'account_id');
     }
 
     public function requests(): HasMany

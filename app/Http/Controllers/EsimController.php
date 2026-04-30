@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\EsimQrMail;
+use App\Models\ActivityLog;
 use App\Models\EsimCode;
 use App\Models\EsimRequest;
 use App\Services\MobimatterClient;
@@ -21,7 +22,7 @@ class EsimController extends Controller
             ->where('status', 'unused')
             ->first();
 
-        if (!$code) {
+        if (! $code) {
             return response()->view('public.esim-used', [], 410);
         }
 
@@ -50,7 +51,7 @@ class EsimController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if (!$code || $code->status !== 'unused') {
+            if (! $code || $code->status !== 'unused') {
                 abort(410, 'This QR has already been used.');
             }
 
@@ -117,7 +118,7 @@ class EsimController extends Controller
                 }
             });
 
-            return back()->withErrors('Activation failed: ' . $e->getMessage());
+            return back()->withErrors('Activation failed: '.$e->getMessage());
         }
 
         DB::transaction(function () use ($code, $esimRequest, $response): void {
@@ -132,12 +133,25 @@ class EsimController extends Controller
                 $code->status = 'used';
                 $code->used_at = now();
                 $code->save();
+
+                if ($code->account_id) {
+                    ActivityLog::create([
+                        'account_id' => $code->account_id,
+                        'batch_id' => $code->batch_id,
+                        'event' => 'cards_activated',
+                        'description' => 'eSIM QR '.$code->uuid.' was activated.',
+                        'metadata' => [
+                            'esim_code_id' => $code->id,
+                            'uuid' => $code->uuid,
+                        ],
+                    ]);
+                }
             }
         });
 
         $qrContent = $response['qr'] ?? $response['qrCode'] ?? $response['qr_svg'] ?? $response['qrImage'] ?? null;
 
-        if (!empty($data['email'])) {
+        if (! empty($data['email'])) {
             Mail::to($data['email'])->send(new EsimQrMail(
                 $data['full_name'],
                 $qrContent,
