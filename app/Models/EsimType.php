@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -21,6 +22,14 @@ class EsimType extends Model
     public function activations(): HasMany
     {
         return $this->hasMany(EsimActivation::class);
+    }
+
+    public function scopeActivePlans(Builder $query): Builder
+    {
+        return $query
+            ->where('status', 'active')
+            ->whereNotNull('product_id')
+            ->where('product_id', '<>', '');
     }
 
     public function requests(): HasMany

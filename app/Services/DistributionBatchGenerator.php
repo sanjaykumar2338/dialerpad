@@ -77,11 +77,11 @@ class DistributionBatchGenerator
 
     private function generateEsimCodes(BatchRequest $request, Batch $batch, array $settings): void
     {
-        $type = EsimType::findOrFail($settings['esim_type_id']);
+        $type = EsimType::activePlans()->whereKey($settings['esim_type_id'])->first();
 
-        if (empty($type->product_id)) {
+        if (! $type) {
             throw ValidationException::withMessages([
-                'esim_type_id' => 'Selected eSIM plan is missing a Mobimatter product ID.',
+                'esim_type_id' => 'Select an active eSIM plan with a product ID.',
             ]);
         }
 

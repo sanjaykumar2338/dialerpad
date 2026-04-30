@@ -97,36 +97,49 @@
                             <form action="{{ route('admin.batch-requests.generate', $batchRequest) }}" method="POST" class="row g-3 align-items-end">
                                 @csrf
                                 @if($batchRequest->product_type === 'esim')
-                                    <div class="col-md-5">
-                                        <label class="form-label" for="esim_type_id_{{ $batchRequest->id }}">eSIM Plan</label>
-                                        <select id="esim_type_id_{{ $batchRequest->id }}" name="esim_type_id" class="form-select" required>
-                                            <option value="">Select plan</option>
-                                            @foreach($esimTypes as $type)
-                                                <option value="{{ $type->id }}">{{ $type->name }} @if($type->product_id) - {{ $type->product_id }} @endif</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label" for="label_{{ $batchRequest->id }}">Label</label>
-                                        <input id="label_{{ $batchRequest->id }}" type="text" name="label" class="form-control" value="Request #{{ $batchRequest->id }}">
-                                    </div>
+                                    @if($esimTypes->isNotEmpty())
+                                        <div class="col-md-5">
+                                            <label class="form-label" for="esim_type_id_{{ $batchRequest->id }}">eSIM Plan</label>
+                                            <select id="esim_type_id_{{ $batchRequest->id }}" name="esim_type_id" class="form-select" required>
+                                                <option value="">Select plan</option>
+                                                @foreach($esimTypes as $type)
+                                                    <option value="{{ $type->id }}" @selected(old('esim_type_id') == $type->id)>{{ $type->name }} @if($type->product_id) - {{ $type->product_id }} @endif</option>
+                                                @endforeach
+                                            </select>
+                                            <div class="form-text text-muted">Only active eSIM plans with a product ID are listed.</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label" for="label_{{ $batchRequest->id }}">Label</label>
+                                            <input id="label_{{ $batchRequest->id }}" type="text" name="label" class="form-control" value="{{ old('label', 'Request #'.$batchRequest->id) }}">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-success w-100">Generate</button>
+                                        </div>
+                                    @else
+                                        <div class="col-12">
+                                            <div class="alert alert-warning mb-0">
+                                                No eSIM plans available. Please create a plan first.
+                                                <a href="{{ route('admin.esim-types.create') }}" class="alert-link">Create plan</a>
+                                            </div>
+                                        </div>
+                                    @endif
                                 @else
                                     <div class="col-md-3">
                                         <label class="form-label" for="prefix_{{ $batchRequest->id }}">Dial Prefix</label>
-                                        <input id="prefix_{{ $batchRequest->id }}" type="text" name="prefix" class="form-control" value="{{ config('pbx.dial_prefix_default', '223') }}" required>
+                                        <input id="prefix_{{ $batchRequest->id }}" type="text" name="prefix" class="form-control" value="{{ old('prefix', config('pbx.dial_prefix_default', '223')) }}" required>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label" for="total_minutes_{{ $batchRequest->id }}">Total Minutes</label>
-                                        <input id="total_minutes_{{ $batchRequest->id }}" type="number" name="total_minutes" min="1" class="form-control" required>
+                                        <label class="form-label" for="total_minutes_{{ $batchRequest->id }}">Call Card Minutes</label>
+                                        <input id="total_minutes_{{ $batchRequest->id }}" type="number" name="total_minutes" min="1" class="form-control" value="{{ old('total_minutes') }}" required>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label" for="name_prefix_{{ $batchRequest->id }}">Name Prefix</label>
-                                        <input id="name_prefix_{{ $batchRequest->id }}" type="text" name="name_prefix" class="form-control" value="Request {{ $batchRequest->id }}">
+                                        <input id="name_prefix_{{ $batchRequest->id }}" type="text" name="name_prefix" class="form-control" value="{{ old('name_prefix', 'Request '.$batchRequest->id) }}">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="submit" class="btn btn-success w-100">Generate</button>
                                     </div>
                                 @endif
-                                <div class="col-md-2">
-                                    <button type="submit" class="btn btn-success w-100">Generate</button>
-                                </div>
                             </form>
                         @endif
 

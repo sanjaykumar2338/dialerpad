@@ -11,6 +11,7 @@ use App\Services\DistributionBatchGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class BatchRequestController extends Controller
@@ -49,7 +50,7 @@ class BatchRequestController extends Controller
             'filters' => $filters,
             'statuses' => BatchRequest::STATUSES,
             'products' => BatchRequest::PRODUCTS,
-            'esimTypes' => EsimType::where('status', 'active')->orderBy('name')->get(),
+            'esimTypes' => EsimType::activePlans()->orderBy('name')->get(),
         ]);
     }
 
@@ -156,8 +157,21 @@ class BatchRequestController extends Controller
     {
         if ($batchRequest->product_type === BatchRequest::PRODUCT_ESIM) {
             return $request->validate([
-                'esim_type_id' => ['required', 'integer', 'exists:esim_types,id'],
+                'esim_type_id' => [
+                    'bail',
+                    'required',
+                    'integer',
+                    Rule::exists('esim_types', 'id')->where(function ($query) {
+                        return $query
+                            ->where('status', 'active')
+                            ->whereNotNull('product_id')
+                            ->where('product_id', '<>', '');
+                    }),
+                ],
                 'label' => ['nullable', 'string', 'max:255'],
+            ], [
+                'esim_type_id.required' => 'Select an eSIM plan before generating this request.',
+                'esim_type_id.exists' => 'Select an active eSIM plan with a product ID.',
             ]);
         }
 
